@@ -1,73 +1,51 @@
-# PolarOps API Contract
+# PolarOps — API Contract
 
-Single source of truth for the backend (FastAPI) and frontend (React). This
-reflects what is actually implemented in `/backend` — not aspirational.
-
-Base URL (local dev): `http://localhost:8000`
+**FROZEN at 09:00 Day 1. No field changes without a two-minute team conversation.**
 
 ## Shared rules
+- All timestamps: ISO 8601 UTC
+- Every 4xx/5xx body: `{"detail": "message"}`
+- Frontend always maps field names — no raw DB rows rendered
 
-- Time: ISO 8601 UTC everywhere.
-- Errors: every 4xx/5xx body is `{"detail": "message"}`.
-- Low-stock rule: `quantity < reorder_threshold` → `status = "low"`.
-- Overdue rule: `now - last_checkin > 6h` → personnel `status = "overdue"`.
-- Asset health rule: `health_pct < 70` → `warning`; `< 40` → `critical`.
-- Geofence rule: distance(personnel, home station) `> 15km` with no check-in
-  in the last hour → auto-creates/escalates an emergency incident and flips
-  personnel status to `emergency`.
-- Correlation rule: an asset in `warning`/`critical` whose
-  `awaiting_part_cargo_id` points to delayed cargo emits **one** merged
-  `correlated_risk` alert, not two.
-- Delay-risk rule: waypoint `eta` passed while `status = pending` → flips to
-  `at_risk`.
-- Cargo delay: cargo `status = in_transit` with `eta` in the past is "delayed".
-- Audit rule: every POST/PATCH writes one `AuditLogEntry`.
+## Entities
 
-## Endpoints
+| Entity | Owner | Key fields |
+|--------|-------|------------|
+| Station | Maisha | id, name, type (base/ship/camp), lat, lng, status |
+| Expedition | Maisha | id, name, start_date, end_date, status, team_lead_id, waypoints[], personnel_ids[], cargo_ids[], risk_score, risk_factors[] |
+| Waypoint | Maisha | id, expedition_id, station_id, sequence, eta, status (pending/reached) |
+| CargoItem | Jalak | id, name, category, weight_kg, expedition_id, current_station_id, status (stored/in_transit/delivered) |
+| InventoryItem | Jalak | id, name, category, station_id, quantity, unit, reorder_threshold, status (ok/low) |
+| Asset | Jalak | id, name, category (vehicle/comms/shelter/medical/power), condition (operational/needs_maintenance/retired), current_holder_type, current_holder_id, last_inspected |
+| Personnel | Param | id, name, role, current_station_id, status (at_base/in_transit/on_expedition/overdue/emergency), last_checkin |
+| EmergencyIncident | Param | id, type, personnel_id, station_id, severity (low/medium/high), description, status (open/responding/resolved), timestamp, escalated_at |
 
-| Method | Route | Purpose |
-|---|---|---|
-| GET | `/health` | Liveness + seed status |
-| GET | `/stations` | List bases/ships/camps |
-| GET/POST | `/expeditions` | List / create expeditions |
-| GET/PATCH | `/expeditions/{id}` | Detail view / update |
-| GET/POST | `/cargo` | List / register cargo |
-| PATCH | `/cargo/{id}` | Update status / station |
-| GET/POST | `/inventory` | List / add stock item |
-| PATCH | `/inventory/{id}/adjust` | Adjust quantity (`delta` or `quantity`) |
-| GET | `/inventory/alerts` | Items below threshold |
-| GET | `/personnel` | Roster with live status |
-| POST | `/personnel` | Add personnel |
-| POST | `/personnel/{id}/checkin` | Record check-in |
-| GET/POST | `/emergency` | List / raise incident |
-| PATCH | `/emergency/{id}` | Update status/severity/notes |
-| GET/POST | `/assets` | List / register asset |
-| PATCH | `/assets/{id}/telemetry` | Push simulated health/runtime reading |
-| GET | `/alerts` | Merged, prioritized risk feed |
-| GET | `/audit-log` | Filterable, paginated write log |
-| GET | `/dashboard/summary` | Aggregated counts + Mission Readiness |
-| GET | `/reports/situation` | PDF snapshot of live status |
-| POST | `/assistant/query` | Template-matched Q&A over live data |
+> Asset in `needs_maintenance` or `retired` is excluded from any "available for assignment" picker.
 
-## Core entities
+## Endpoints — 14 total
 
-Station, Expedition, Waypoint, Personnel, CargoItem, InventoryItem,
-EmergencyIncident, Asset, AuditLogEntry — see `backend/models.py` for exact
-fields. `backend/schemas.py` defines the request/response shapes the frontend
-renders.
+| Method | Route | Owner |
+|--------|-------|-------|
+| GET | /health | Param |
+| GET | /stations | Maisha |
+| GET, POST | /expeditions | Maisha |
+| GET, PATCH | /expeditions/{id} | Maisha |
+| GET | /expeditions/{id}/risk | Maisha |
+| GET, POST | /cargo | Jalak |
+| PATCH | /cargo/{id} | Jalak |
+| GET, POST | /inventory | Jalak |
+| PATCH | /inventory/{id}/adjust | Jalak |
+| GET | /inventory/alerts | Jalak |
+| GET, POST | /assets | Jalak |
+| PATCH | /assets/{id} | Jalak |
+| GET | /assets/maintenance-due | Jalak |
+| GET | /personnel | Param |
+| POST | /personnel/{id}/checkin | Param |
+| GET, POST | /emergency | Param |
+| PATCH | /emergency/{id} | Param |
+| GET | /dashboard/summary | Param |
 
-## Example: correlated alert
-
-```json
-{
-  "id": "ALT-CORR-AST-GEN07",
-  "type": "correlated_risk",
-  "severity": "high",
-  "message": "Generator GEN-07 at 64% health (WARNING); its replacement part is on cargo CGO-1002, delayed 36.0h.",
-  "linked": { "asset_id": "AST-GEN07", "cargo_id": "CGO-1002" },
-  "created_at": "2026-09-23T17:32:40Z"
-}
-```
-
-If the entity list or endpoint shapes change, update this file and the
-routers/schemas together in the same change.
+## Contract drift log
+| Date | Change | Approved by |
+|------|--------|-------------|
+| | | |
