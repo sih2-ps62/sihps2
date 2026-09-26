@@ -18,3 +18,4 @@ class EmergencyIncident(Base):
     status = Column(String, nullable=False, default="open")  # open / responding / resolved
     timestamp = Column(DateTime, nullable=False)
     escalated_at = Column(DateTime, nullable=True)
+    resolved_at = Column(DateTime, nullable=True)

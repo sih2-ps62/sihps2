@@ -1,7 +1,8 @@
 # OWNER: Param
 # Evaluated lazily on GET /personnel, GET /dashboard/summary and the expedition read paths.
 #   (now - last_checkin) > 6h and status != overdue  ->  status "overdue"
-# Personnel in an active emergency are exempt — that status must not be masked.
+# Personnel in an active emergency are exempt — that status must not be masked — and so is anyone on leave,
+# who is not expected to check in.
 import os
 from datetime import datetime, timedelta
 
@@ -16,7 +17,7 @@ OVERDUE_AFTER_HOURS = float(os.getenv("POLAROPS_OVERDUE_HOURS", "6"))
 
 def should_flag_overdue(status: str, last_checkin: datetime, now: datetime,
                         hours: float = OVERDUE_AFTER_HOURS) -> bool:
-    if status in ("overdue", "emergency"):
+    if status in ("overdue", "emergency", "on_leave"):
         return False
     return (now - last_checkin) > timedelta(hours=hours)
 

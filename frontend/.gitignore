@@ -1,0 +1,36 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Environment variables / secrets
+.env
+.env.*
+!.env.example
+
+# SQLite database — regenerated with clean seed data on first run (db.js);
+# never commit it, since it accumulates whatever demo/test data ran locally
+server/*.sqlite
+server/*.sqlite-journal
+server/*.sqlite-wal
+server/*.sqlite-shm
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

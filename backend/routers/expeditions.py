@@ -148,7 +148,7 @@ def update_expedition(expedition_id: str, body: ExpeditionUpdate, db: Session = 
     for field in ("name", "start_date", "end_date", "status"):
         if changes.get(field) is not None:
             setattr(exp, field, changes[field])
-    if exp.end_date < exp.start_date:
+    if exp.end_date and exp.end_date < exp.start_date:
         raise HTTPException(status_code=400, detail="end_date must not be before start_date")
     if "team_lead_id" in changes:
         exp.team_lead_id = check_ref(db, Personnel, changes["team_lead_id"], "team_lead_id")

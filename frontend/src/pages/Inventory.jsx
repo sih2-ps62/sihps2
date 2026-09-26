@@ -1,156 +1,120 @@
-import { useState } from 'react'
-import { api } from '../services/api'
-import { useFetch } from '../hooks/useFetch'
-import { LoadingState, ErrorState, EmptyState } from '../components/States'
-import StatusBadge from '../components/StatusBadge'
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Plus, Boxes, AlertTriangle, PackageX, Layers } from "lucide-react";
+import Button from "../components/ui/Button";
+import FilterChip from "../components/ui/FilterChip";
+import SearchInput from "../components/ui/SearchInput";
+import DataTable from "../components/ui/DataTable";
+import Pagination from "../components/ui/Pagination";
+import StatusBadge from "../components/ui/StatusBadge";
+import StatStrip from "../components/ui/StatStrip";
+import NewInventoryModal from "../components/inventory/NewInventoryModal";
+import StockLevelChart from "../components/inventory/StockLevelChart";
+import { useListState } from "../hooks/useListState";
+import { useQuery } from "../hooks/useApi";
+import { api } from "../lib/api";
 
-async function loadAll() {
-  const [inventory, stations] = await Promise.all([api.listInventory(), api.listStations()])
-  return { inventory, stations }
-}
+const filters = ["All", "Low Stock", "Needs Maintenance"];
 
-function CreateForm({ stations, onCreated, onCancel }) {
-  const [form, setForm] = useState({ name: '', category: '', station_id: '', quantity: '', unit: 'units', reorder_threshold: '' })
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState(null)
+const inventoryStatItems = [
+  { id: "skus", statKey: "totalSkus", label: "Total SKUs", icon: Boxes },
+  { id: "low", statKey: "lowStock", label: "Low Stock", icon: AlertTriangle },
+  { id: "out", statKey: "outOfStock", label: "Out of Stock", icon: PackageX },
+  { id: "categories", statKey: "categories", label: "Categories", icon: Layers },
+];
 
-  const submit = async (e) => {
-    e.preventDefault()
-    setSaving(true)
-    setError(null)
-    try {
-      await api.createInventoryItem({
-        name: form.name,
-        category: form.category || null,
-        station_id: form.station_id,
-        quantity: Number(form.quantity),
-        unit: form.unit,
-        reorder_threshold: Number(form.reorder_threshold),
-      })
-      onCreated()
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  return (
-    <form onSubmit={submit} className="bg-base-900 border border-base-700 rounded-xl p-5 space-y-3">
-      <h3 className="text-sm font-medium text-slate-200">Add Inventory Item</h3>
-      {error && <div className="text-sm text-red-400 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2">{error}</div>}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <input required placeholder="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
-          className="bg-base-800 border border-base-700 rounded-lg px-3 py-2 text-sm text-slate-200 md:col-span-3" />
-        <select required value={form.station_id} onChange={(e) => setForm({ ...form, station_id: e.target.value })}
-          className="bg-base-800 border border-base-700 rounded-lg px-3 py-2 text-sm text-slate-200">
-          <option value="">Station</option>
-          {stations.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-        </select>
-        <input placeholder="Category" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}
-          className="bg-base-800 border border-base-700 rounded-lg px-3 py-2 text-sm text-slate-200" />
-        <input placeholder="Unit (L, kg, units)" value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })}
-          className="bg-base-800 border border-base-700 rounded-lg px-3 py-2 text-sm text-slate-200" />
-        <input required type="number" placeholder="Quantity" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })}
-          className="bg-base-800 border border-base-700 rounded-lg px-3 py-2 text-sm text-slate-200" />
-        <input required type="number" placeholder="Reorder threshold" value={form.reorder_threshold} onChange={(e) => setForm({ ...form, reorder_threshold: e.target.value })}
-          className="bg-base-800 border border-base-700 rounded-lg px-3 py-2 text-sm text-slate-200" />
-      </div>
-      <div className="flex gap-2 justify-end pt-1">
-        <button type="button" onClick={onCancel} className="px-4 py-1.5 rounded-lg text-sm text-slate-400 hover:text-slate-200">Cancel</button>
-        <button type="submit" disabled={saving} className="px-4 py-1.5 rounded-lg bg-accent-500 hover:bg-accent-400 disabled:opacity-50 text-white text-sm font-medium">
-          {saving ? 'Saving…' : 'Add Item'}
-        </button>
-      </div>
-    </form>
-  )
+function stockTone(row) {
+  if (row.quantity === 0) return "critical";
+  if (row.quantity <= row.threshold) return "warning";
+  return "ok";
 }
 
 export default function Inventory() {
-  const { data, loading, error, reload } = useFetch(loadAll, [])
-  const [showCreate, setShowCreate] = useState(false)
-  const [category, setCategory] = useState('')
-  const [busyId, setBusyId] = useState(null)
+  const navigate = useNavigate();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const list = useListState({ defaultSort: "name" });
+  const [activeFilter, setActiveFilter] = useState("All");
 
-  const adjust = async (id, delta) => {
-    setBusyId(id)
-    try {
-      await api.adjustInventory(id, { delta })
-      reload()
-    } catch (err) {
-      alert(err.message)
-    } finally {
-      setBusyId(null)
-    }
-  }
+  const { data: statsResult } = useQuery(() => api.get("/stats"), []);
+  const statItemsWithValues = inventoryStatItems.map((item) => ({
+    ...item,
+    value: statsResult?.inventory?.[item.statKey],
+  }));
 
-  if (loading) return <LoadingState label="Loading inventory…" />
-  if (error) return <ErrorState message={error} onRetry={reload} />
-  if (!data) return null
+  const { data, isLoading, refetch } = useQuery(
+    () =>
+      api.get("/inventory", {
+        ...list.params,
+        lowStock: activeFilter === "Low Stock" ? "true" : undefined,
+        needsMaintenance: activeFilter === "Needs Maintenance" ? "true" : undefined,
+      }),
+    [list.params.page, list.params.sort, list.params.order, list.params.q, activeFilter]
+  );
 
-  const { inventory, stations } = data
-  const categories = [...new Set(inventory.map((i) => i.category).filter(Boolean))]
-  const filtered = category ? inventory.filter((i) => i.category === category) : inventory
-  const stationName = (id) => stations.find((s) => s.id === id)?.name || id
+  const { data: chartResult } = useQuery(() => api.get("/inventory", { pageSize: 100, sort: "name" }), []);
+
+  const columns = [
+    { key: "name", label: "Item", sortable: true },
+    { key: "category", label: "Category", sortable: true },
+    {
+      key: "quantity",
+      label: "Stock",
+      sortable: true,
+      render: (row) => (
+        <StatusBadge label={`${row.quantity}/${row.threshold} ${row.unit}`} tone={stockTone(row)} />
+      ),
+    },
+    {
+      key: "needs_maintenance",
+      label: "Maintenance",
+      render: (row) => (row.needs_maintenance ? <StatusBadge label="Needs attention" tone="warning" /> : "—"),
+    },
+  ];
 
   return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-xl font-semibold text-white">Inventory Manager</h1>
-          <p className="text-sm text-slate-500">Per-station stock with automatic low-stock alerts.</p>
-        </div>
-        <button onClick={() => setShowCreate((s) => !s)} className="px-4 py-2 rounded-lg bg-accent-500 hover:bg-accent-400 text-white text-sm font-medium">
-          {showCreate ? 'Close form' : '+ Add Item'}
-        </button>
-      </div>
+    <div className="flex flex-col gap-4 px-6 py-6 md:px-8">
+      <StatStrip items={statItemsWithValues} delay={0} />
 
-      {showCreate && <CreateForm stations={stations} onCreated={() => { setShowCreate(false); reload() }} onCancel={() => setShowCreate(false)} />}
+      {chartResult?.data?.length > 0 && <StockLevelChart items={chartResult.data} delay={40} />}
 
-      {categories.length > 0 && (
-        <div className="flex gap-2 flex-wrap">
-          <button onClick={() => setCategory('')} className={`text-xs px-3 py-1.5 rounded-lg border ${!category ? 'bg-accent-500/20 border-accent-500/50 text-accent-300' : 'border-base-700 text-slate-500'}`}>All</button>
-          {categories.map((c) => (
-            <button key={c} onClick={() => setCategory(c)} className={`text-xs px-3 py-1.5 rounded-lg border capitalize ${category === c ? 'bg-accent-500/20 border-accent-500/50 text-accent-300' : 'border-base-700 text-slate-500'}`}>{c}</button>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap items-center gap-2">
+          {filters.map((filter) => (
+            <FilterChip
+              key={filter}
+              label={filter}
+              active={activeFilter === filter}
+              onClick={() => setActiveFilter(filter)}
+            />
           ))}
         </div>
-      )}
-
-      {filtered.length === 0 ? (
-        <EmptyState label="No inventory records." />
-      ) : (
-        <div className="bg-base-900 border border-base-700 rounded-xl overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-base-800 text-slate-500 text-xs uppercase">
-              <tr>
-                <th className="text-left px-4 py-2.5">Item</th>
-                <th className="text-left px-4 py-2.5">Station</th>
-                <th className="text-left px-4 py-2.5">Quantity</th>
-                <th className="text-left px-4 py-2.5">Threshold</th>
-                <th className="text-left px-4 py-2.5">Status</th>
-                <th className="text-left px-4 py-2.5">Adjust</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((item) => (
-                <tr key={item.id} className={`border-t border-base-800 ${item.status === 'low' ? 'bg-amber-500/5' : ''}`}>
-                  <td className="px-4 py-2.5 text-slate-200">{item.name}</td>
-                  <td className="px-4 py-2.5 text-slate-400">{stationName(item.station_id)}</td>
-                  <td className="px-4 py-2.5 text-slate-300">{item.quantity} {item.unit}</td>
-                  <td className="px-4 py-2.5 text-slate-500">{item.reorder_threshold} {item.unit}</td>
-                  <td className="px-4 py-2.5"><StatusBadge value={item.status} /></td>
-                  <td className="px-4 py-2.5">
-                    <div className="flex gap-1.5">
-                      <button disabled={busyId === item.id} onClick={() => adjust(item.id, -10)} className="text-xs w-7 h-7 rounded-md bg-base-800 hover:bg-base-700 text-slate-300">−</button>
-                      <button disabled={busyId === item.id} onClick={() => adjust(item.id, 10)} className="text-xs w-7 h-7 rounded-md bg-base-800 hover:bg-base-700 text-slate-300">+</button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="flex flex-wrap items-center gap-2">
+          <SearchInput value={list.q} onChange={list.updateSearch} placeholder="Search inventory…" />
+          <Button icon={Plus} onClick={() => setIsModalOpen(true)}>
+            New Item
+          </Button>
         </div>
-      )}
+      </div>
+
+      <div className="glass-card p-5">
+        <div className="mb-4">
+          <h2 className="text-lg font-semibold text-text-primary">Stock Levels</h2>
+          <p className="text-sm text-text-secondary">Supplies, equipment & consumables</p>
+        </div>
+        <DataTable
+          columns={columns}
+          rows={data?.data ?? []}
+          sort={list.sort}
+          order={list.order}
+          onSortChange={list.toggleSort}
+          onRowClick={(row) => navigate(`/inventory/${row.id}`)}
+          isLoading={isLoading}
+          emptyMessage="No inventory items match your filters."
+        />
+        <Pagination page={data?.page ?? 1} totalPages={data?.totalPages ?? 1} total={data?.total ?? 0} onPageChange={list.setPage} />
+      </div>
+
+      <NewInventoryModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onCreated={refetch} />
     </div>
-  )
+  );
 }

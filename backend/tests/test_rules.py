@@ -74,6 +74,10 @@ def test_overdue_skips_already_overdue_and_emergency():
     assert not should_flag_overdue("emergency", stale, NOW)
 
 
+def test_overdue_skips_people_on_leave():
+    assert not should_flag_overdue("on_leave", NOW - timedelta(days=5), NOW)
+
+
 # ------------------------------------------------------------------ escalation
 def test_next_level_caps_at_high():
     assert [next_level(s) for s in ("low", "medium", "high")] == ["medium", "high", "high"]

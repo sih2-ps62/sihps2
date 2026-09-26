@@ -4,11 +4,15 @@ import os
 from datetime import datetime, timezone
 from pathlib import Path
 
+from dotenv import load_dotenv
 from fastapi import HTTPException
-from sqlalchemy import create_engine, select
+from sqlalchemy import create_engine, inspect, select
 from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
 BASE_DIR = Path(__file__).resolve().parent
+# Optional backend/.env for secrets and demo knobs. Real environment variables win; tests switch this off.
+if not os.getenv("POLAROPS_SKIP_DOTENV"):
+    load_dotenv(BASE_DIR / ".env")
 DATABASE_URL = os.getenv("POLAROPS_DB_URL", f"sqlite:///{BASE_DIR / 'polarops.db'}")
 
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
@@ -26,10 +30,28 @@ def get_db():
         db.close()
 
 
+def schema_drift() -> list[str]:
+    """'table.column' entries the models define but the database file lacks (an older polarops.db)."""
+    inspector = inspect(engine)
+    missing = []
+    for table in Base.metadata.sorted_tables:
+        if not inspector.has_table(table.name):
+            continue
+        present = {column["name"] for column in inspector.get_columns(table.name)}
+        missing += [f"{table.name}.{name}" for name in table.columns.keys() if name not in present]
+    return missing
+
+
 def init_db():
     import models  # noqa: F401  (registers every table on Base.metadata)
 
     Base.metadata.create_all(engine)
+    drift = schema_drift()
+    if drift:
+        raise RuntimeError(
+            "The database schema is out of date (missing: " + ", ".join(drift) + "). "
+            "Rebuild it with:  python seed.py"
+        )
 
 
 def utcnow() -> datetime:

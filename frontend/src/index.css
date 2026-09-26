@@ -1,26 +1,94 @@
-@import 'leaflet/dist/leaflet.css';
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+html {
+  scroll-behavior: smooth;
 }
 
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+body {
+  margin: 0;
+  background-color: theme("colors.canvas");
+  background-image: radial-gradient(circle at top right, #dcf0fa 0%, transparent 55%);
+  background-attachment: fixed;
+  color: theme("colors.text-primary");
+  font-family: theme("fontFamily.sans");
+  -webkit-font-smoothing: antialiased;
 }
-::-webkit-scrollbar-track {
-  background: transparent;
+
+@layer components {
+  .glass-card {
+    @apply bg-surface backdrop-blur-glass border border-border rounded-2xl shadow-glass;
+    backdrop-filter: blur(16px) saturate(140%);
+    -webkit-backdrop-filter: blur(16px) saturate(140%);
+  }
+
+  .glass-card-hover {
+    @apply transition-all duration-200 ease-out;
+  }
+
+  .glass-card-hover:hover {
+    transform: translateY(-3px);
+    box-shadow: theme("boxShadow.glass-hover");
+  }
+
+  .icon-chip {
+    @apply flex items-center justify-center w-8 h-8 rounded-lg bg-accent-soft text-accent shrink-0 transition-transform duration-200 ease-out;
+  }
+
+  .icon-chip-hover:hover .icon-chip {
+    transform: scale(1.03);
+  }
+
+  .focus-ring {
+    @apply outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas;
+  }
 }
-::-webkit-scrollbar-thumb {
-  background: #2a3654;
-  border-radius: 4px;
+
+@layer utilities {
+  .stagger-1 { animation-delay: 40ms; }
+  .stagger-2 { animation-delay: 80ms; }
+  .stagger-3 { animation-delay: 120ms; }
+  .stagger-4 { animation-delay: 160ms; }
+  .stagger-5 { animation-delay: 200ms; }
+  .stagger-6 { animation-delay: 240ms; }
+  .stagger-7 { animation-delay: 280ms; }
+}
+
+.polar-tiles {
+  filter: grayscale(0.25) saturate(0.75) brightness(1.05) hue-rotate(5deg);
 }
 
 .leaflet-container {
-  background: #0b1220 !important;
-  border-radius: 0.75rem;
+  background: theme("colors.accent-soft") !important;
+}
+
+.leaflet-control-zoom a {
+  color: theme("colors.text-primary") !important;
+}
+
+/* Custom scrollbar for internally-scrollable panels */
+.thin-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.thin-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.thin-scroll::-webkit-scrollbar-thumb {
+  background-color: theme("colors.border");
+  border-radius: 999px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }

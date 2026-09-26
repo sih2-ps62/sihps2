@@ -83,6 +83,8 @@ def update_incident(incident_id: str, body: EmergencyUpdate, db: Session = Depen
         raise HTTPException(status_code=409, detail=f"Cannot move incident from {incident.status} back to {body.status}")
     incident.status = body.status
     if body.status == "resolved":
+        if incident.resolved_at is None:
+            incident.resolved_at = utcnow()
         _release_personnel(db, incident)
     db.commit()
     return incident

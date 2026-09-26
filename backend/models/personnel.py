@@ -1,6 +1,6 @@
 # OWNER: Param
 # Fields: id, name, role, current_station_id,
-#         status (at_base/in_transit/on_expedition/overdue/emergency), last_checkin
+#         status (at_base/in_transit/on_expedition/overdue/emergency/on_leave), last_checkin
 from sqlalchemy import Column, DateTime, ForeignKey, String
 
 from db import Base

@@ -21,9 +21,12 @@ class Expedition(Base):
     id = Column(String, primary_key=True)
     name = Column(String, nullable=False)
     start_date = Column(Date, nullable=False)
-    end_date = Column(Date, nullable=False)
+    end_date = Column(Date, nullable=True)  # open-ended while an expedition is still running
     status = Column(String, nullable=False, default="planned")  # planned / in_progress / completed
     team_lead_id = Column(String, ForeignKey("personnel.id"), nullable=True)
+    # Frontend-facing (/api) fields, not part of the frozen /expeditions contract:
+    region = Column(String, nullable=True)  # Antarctic / Arctic; derived from the route when unset
+    team_lead_name = Column(String, nullable=True)  # free-text lead when they are not on the roster
 
     waypoints = relationship(
         "Waypoint",

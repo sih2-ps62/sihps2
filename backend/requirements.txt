@@ -2,5 +2,7 @@ fastapi
 uvicorn[standard]
 pydantic
 sqlalchemy
+pyjwt
+python-dotenv
 pytest
 httpx

@@ -19,12 +19,12 @@ StationType = Literal["base", "ship", "camp"]
 StationStatus = Literal["operational", "degraded", "offline"]
 ExpeditionStatus = Literal["planned", "in_progress", "completed"]
 WaypointStatus = Literal["pending", "reached"]
-CargoStatus = Literal["stored", "in_transit", "delivered"]
+CargoStatus = Literal["stored", "in_transit", "delivered", "delayed"]
 InventoryStatus = Literal["ok", "low"]
 AssetCategory = Literal["vehicle", "comms", "shelter", "medical", "power"]
 AssetCondition = Literal["operational", "needs_maintenance", "retired"]
 HolderType = Literal["station", "expedition"]
-PersonnelStatus = Literal["at_base", "in_transit", "on_expedition", "overdue", "emergency"]
+PersonnelStatus = Literal["at_base", "in_transit", "on_expedition", "overdue", "emergency", "on_leave"]
 Severity = Literal["low", "medium", "high"]
 IncidentStatus = Literal["open", "responding", "resolved"]
 RiskBand = Literal["low", "medium", "high"]
@@ -71,7 +71,7 @@ class ExpeditionOut(BaseModel):
     id: str
     name: str
     start_date: date
-    end_date: date
+    end_date: Optional[date] = None
     status: ExpeditionStatus
     team_lead_id: Optional[str] = None
     waypoints: list[WaypointOut]
@@ -148,7 +148,7 @@ class InventoryOut(ORMModel):
     id: str
     name: str
     category: str
-    station_id: str
+    station_id: Optional[str] = None
     quantity: int
     unit: str
     reorder_threshold: int
