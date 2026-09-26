@@ -15,13 +15,14 @@ from fastapi import Depends, Header, HTTPException
 log = logging.getLogger("polarops")
 
 _DEV_SECRET = "polarops-dev-secret-change-me-before-deploying"
-JWT_SECRET = os.getenv("POLAROPS_JWT_SECRET", _DEV_SECRET)
+JWT_SECRET = os.getenv("POLAROPS_JWT_SECRET") or os.getenv("JWT_SECRET") or _DEV_SECRET
 TOKEN_TTL_SECONDS = 12 * 60 * 60
 
 
 def warn_if_dev_secret() -> None:
     if JWT_SECRET == _DEV_SECRET:
-        log.warning("POLAROPS_JWT_SECRET is not set - using the built-in dev secret. Set it before any real deployment.")
+        log.warning("POLAROPS_JWT_SECRET (or JWT_SECRET) is not set - using the built-in dev secret. "
+                    "Set it before any real deployment.")
 
 
 _SCRYPT = {"n": 2**14, "r": 8, "p": 1, "dklen": 32}

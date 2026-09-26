@@ -6,29 +6,30 @@ FastAPI + SQLite backend with a server-side rule engine, and a React + Vite +
 Tailwind + Leaflet frontend. Team of six: **Backend** — Maisha, Jalak, Param ·
 **Frontend** — Shrey, Akshit, Tanvi.
 
-> **New here?** Read [`docs/PROJECT_CONTEXT.md`](docs/PROJECT_CONTEXT.md) for the
-> full handoff (what's built, what changed, what's left per person) and
-> [`docs/API_CONTRACT.md`](docs/API_CONTRACT.md) for every endpoint and payload.
+> **Presenting?** Read [`docs/DEMO_GUIDE.md`](docs/DEMO_GUIDE.md): what every feature does, where to find it,
+> a 5-minute demo script, and what is real vs. simulated.
+> **Developing?** [`docs/PROJECT_CONTEXT.md`](docs/PROJECT_CONTEXT.md) is the handoff and
+> [`docs/API_CONTRACT.md`](docs/API_CONTRACT.md) lists every endpoint and payload.
 
-## Status (end of Day 1)
+## Status (end of Day 3)
 
 | Area | State |
 |------|-------|
-| Backend API — all 24 contract routes | **Done**, persisted in SQLite, 43 automated tests passing |
+| Backend — the plan's 24 contract routes | **Done**, persisted in SQLite |
+| Backend — frontend API (`/api`): sign-in, roles, audit log, analytics, assistant, pagination | **Done** |
 | Rule engine — low-stock, overdue check-in, route risk score, emergency escalation | **Done** (server-side, plain Python) |
-| Seed data — 5 stations, 8 crew, 3 expeditions, cargo, stock, assets, incidents | **Done** — `python backend/seed.py` |
-| API contract doc | **Done**, drift log started |
-| Frontend — shared UI kit, API adapter, all 8 screens | **Not started** — files are stubs; see the per-person list in `docs/PROJECT_CONTEXT.md` |
-| Frontend currently builds | **No** — `services/api.js` is an empty stub and the leftover old pages import from it (fix = Shrey's first task) |
+| Frontend — every screen (dashboard, map, expeditions, cargo, inventory, personnel, emergency, analytics, audit log, settings), login, assistant, offline-queue simulation | **Done**, wired to the FastAPI backend |
+| Automated tests | Backend: 106 passing · Frontend: 39 passing |
+| Public hosting | Not set up (runs locally) |
 
 ## Prerequisites
 
 - Python 3.11+
-- Node.js 18+
+- Node.js 20.19+ (or 22+)
 
-## Quick start (two terminals)
+## Quick start
 
-### Terminal 1 — backend
+One-time setup:
 
 ```bash
 cd backend
@@ -36,80 +37,96 @@ python -m venv venv
 venv\Scripts\activate          # Windows
 # source venv/bin/activate     # macOS/Linux
 pip install -r requirements.txt
-python seed.py
-uvicorn main:app --reload --port 8000
+
+cd ../frontend
+npm install
 ```
 
-API at `http://127.0.0.1:8000` — interactive Swagger docs at
-`http://127.0.0.1:8000/docs`.
-
-### Terminal 2 — frontend
+Then, every time:
 
 ```bash
 cd frontend
-npm install
 npm run dev
 ```
 
-Frontend at `http://localhost:5173`. It reads the API base URL from
-`frontend/.env` (`VITE_API_URL=http://localhost:8000`).
+That starts **both** servers:
 
-> Until Shrey's `services/api.js` lands, the frontend will fail to compile.
-> The backend is fully usable on its own through `/docs` in the meantime.
+- App: `http://localhost:5183`
+- API: `http://127.0.0.1:8000` (Swagger docs at `/docs`)
+
+A brand-new database seeds itself on first start. Sign in with:
+
+| Role | Email | Password |
+|------|-------|----------|
+| Duty officer | `duty.officer@polarops.io` | `icebreaker26` |
+| Admin (can delete) | `admin@polarops.io` | `glacieradmin26` |
+
+To run the pieces separately: `npm run dev:client` (frontend) and, in `backend/`,
+`uvicorn main:app --reload --port 8000`.
+
+## Configuration (all optional)
+
+Put backend settings in `backend/.env` (git-ignored) or set them as environment variables:
+
+| Setting | What it does |
+|---------|--------------|
+| `GEMINI_API_KEY` | Turns on AI answers in the assistant (free key: aistudio.google.com/apikey). Without it the assistant answers from live data with a built-in engine. |
+| `GEMINI_MODEL` | Override the Gemini model name. |
+| `POLAROPS_JWT_SECRET` (or `JWT_SECRET`) | Secret that signs login sessions. **Set it before any public deployment.** |
+| `POLAROPS_CORS_ORIGINS` | Comma-separated browser origins allowed to call the API. Default: the local frontend (`http://localhost:5183`, `http://127.0.0.1:5183`). Set it to your deployed frontend's address; `*` allows any. |
+| `POLAROPS_LOGIN_MAX_FAILURES` / `POLAROPS_LOGIN_WINDOW_SECONDS` | Sign-in brake: failures allowed per account and address within the window before a temporary lockout (defaults 5 and 60). |
+| `POLAROPS_ESCALATION_HOURS` / `POLAROPS_OVERDUE_HOURS` | Shorten the rule timers for a live demo (defaults 2 and 6). |
+| `POLAROPS_AUTOSEED=0` | Start with an empty database instead of seeding demo data. |
+| `POLAROPS_DB_URL` | Use a different database file/URL. |
+
+Frontend: `VITE_API_URL` (default `http://localhost:8000/api`) — see `frontend/.env.example`.
 
 ## Tests
 
 ```bash
-cd backend
-python -m pytest
+cd backend && python -m pytest     # 106 tests, throwaway database
+cd frontend && npm test            # 39 tests
 ```
 
-Runs against a throwaway SQLite file, so it never touches `polarops.db`.
+Backend tests never touch `polarops.db`.
 
 ## Re-seeding
 
-`python backend/seed.py` wipes and repopulates `backend/polarops.db`. Re-run it
-any time you want a clean demo state. The seed deliberately includes:
+`python backend/seed.py` wipes and repopulates `backend/polarops.db`. Re-run it before a demo: the sample data
+is timestamped relative to when it is created, so a stale database shows different numbers.
 
-- one expedition on a blizzard route with an overdue crew member (high risk) and one on a calm route (low risk)
-- three inventory items already below their reorder threshold
-- two assets in `needs_maintenance` and one `retired`
-- one resolved incident that had escalated (shows escalation history) and one open incident
+- `python seed.py` — the **demo** dataset the frontend was designed around: 12 polar stations, 10 people,
+  5 expeditions, 6 cargo manifests, 7 stock items, 7 incidents. Three stations have several problems at once
+  (low stock + overdue check-in + open incident), which drives the "Compound Risk" cards.
+- `python seed.py --profile plan` — the original plan dataset (Bharati, Maitri, a ship, two camps) that the
+  Day-1 backend tests run on.
 
-## Demo-time knobs
-
-The rules are time-based (6h check-in, 2h escalation), which you cannot wait
-for on stage. Shorten them when starting the API:
-
-```bash
-# PowerShell
-$env:POLAROPS_ESCALATION_HOURS = "0.02"   # ~72 seconds
-$env:POLAROPS_OVERDUE_HOURS = "0.05"      # ~3 minutes
-uvicorn main:app --port 8000
-```
-
-Defaults are 2 and 6 hours. The weather input to the risk score can be changed
-live per request: `GET /expeditions/{id}/risk?weather_code=blizzard&season=winter`.
+If the API refuses to start saying the schema is out of date, the database file is from an older version:
+run `python seed.py` to rebuild it.
 
 ## What's real vs. simulated
 
-- **Real**: expedition / cargo / inventory / asset / personnel / emergency data,
-  all persisted in SQLite; the four rules (low-stock, overdue check-in, route
-  risk score, emergency auto-escalation) computed server-side on every read or
-  write; dashboard aggregation across all modules.
-- **Simulated**: the weather feed (each station carries a fixed weather code that
-  feeds the risk score, overridable per request); crew check-in times come from
-  the seed and the check-in button.
-- **Roadmap, not built**: offline-first sync, real GPS / IoT position feeds,
-  ML-based predictive risk, authentication, a background scheduler (rules
-  are evaluated lazily on reads instead).
+- **Real**: all data persisted in SQLite; sign-in with roles; the four rules (low-stock, overdue check-in, route
+  risk score, emergency auto-escalation) computed server-side on every read or write; the audit log; dashboard
+  and analytics aggregation across all modules; assistant answers grounded in the live data.
+- **Simulated**: the weather feed (each station carries a fixed weather code); station positions; "Polar
+  Blackout Mode" (the server never goes down — changes are queued in the browser and replayed, and the queue does
+  not survive a page reload).
+- **Roadmap, not built**: true offline-first sync, real GPS / IoT feeds, ML-based predictive risk, email/sound
+  notifications, hosted deployment, a background scheduler (rules are evaluated lazily on reads instead).
 
 ## Project layout
 
 ```
-/backend    FastAPI + SQLite — models/, routers/, rules/ (one file per owner)
+/backend    FastAPI + SQLite
+  routers/    the plan's endpoints (one file per module)
+  ui_api/     the frontend API mounted at /api (sign-in, lists, audit log, analytics, assistant)
+  rules/      the four rules, pure logic
+  models/     database tables
+  tests/      test_api.py, test_rules.py (plan) + test_ui_api.py (frontend API)
 /frontend   React + Vite + Tailwind + Leaflet
-/docs       API_CONTRACT.md (endpoints + payloads), PROJECT_CONTEXT.md (handoff)
+  server/     legacy Node demo backend, no longer used (safe to delete)
+/docs       DEMO_GUIDE.md, API_CONTRACT.md, PROJECT_CONTEXT.md
 ```
 
 ## Ground rule

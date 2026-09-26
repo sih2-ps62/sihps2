@@ -8,11 +8,19 @@ _tmp = tempfile.mkdtemp(prefix="polarops-test-")
 atexit.register(shutil.rmtree, _tmp, ignore_errors=True)
 os.environ["POLAROPS_DB_URL"] = f"sqlite:///{_tmp}/test.db"
 os.environ["POLAROPS_SKIP_DOTENV"] = "1"  # a developer's backend/.env must not change what the tests see
-for _knob in ("GEMINI_API_KEY", "POLAROPS_ESCALATION_HOURS", "POLAROPS_OVERDUE_HOURS", "POLAROPS_UI_OVERDUE_HOURS"):
+for _knob in ("GEMINI_API_KEY", "POLAROPS_ESCALATION_HOURS", "POLAROPS_OVERDUE_HOURS", "POLAROPS_UI_OVERDUE_HOURS",
+              "POLAROPS_CORS_ORIGINS", "POLAROPS_JWT_SECRET", "JWT_SECRET"):
     os.environ.pop(_knob, None)
 
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
+
+
+@pytest.fixture(autouse=True)
+def _fresh_login_throttle():
+    from ui_api.throttle import login_throttle
+
+    login_throttle.clear()
 
 
 @pytest.fixture()

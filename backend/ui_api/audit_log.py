@@ -30,11 +30,12 @@ def list_audit_log(
     db: Session = Depends(get_db),
 ):
     # Fed in id order (newest first when descending) so entries from the same second keep their real order.
-    query = select(AuditLog).order_by(AuditLog.id.desc() if params.order == "desc" else AuditLog.id)
+    newest_first = (params.order or "desc") == "desc"
+    query = select(AuditLog).order_by(AuditLog.id.desc() if newest_first else AuditLog.id)
     rows = [_row(e) for e in db.execute(query).scalars()]
     if resourceType:
         rows = [r for r in rows if r["resource_type"] == resourceType]
     if action:
         rows = [r for r in rows if r["action"] == action]
     rows = search(rows, params.q, ("summary", "user_name"))
-    return paginate(rows, params, sortable=SORTABLE, default_sort="created_at")
+    return paginate(rows, params, sortable=SORTABLE, default_sort="created_at", default_order="desc")

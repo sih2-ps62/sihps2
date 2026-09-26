@@ -5,7 +5,7 @@ Integrated Polar Expedition Logistics & Asset Management System (PS 26062).
 what exists, what changed, and what's left. Endpoint payloads live in
 [`API_CONTRACT.md`](API_CONTRACT.md); setup lives in the root `README.md`.
 
-_Last updated: end of Day 1 — backend complete, frontend not started._
+_Last updated: end of Day 3 — backend and frontend are integrated. **Sections 1, 5, 6 and 9 below describe the Day-1 situation (frontend not started, legacy files, per-person to-do lists) and are kept as history.** For the current state read the root `README.md`; for what each feature does and how to demo it read [`DEMO_GUIDE.md`](DEMO_GUIDE.md); for the frontend's endpoints see "Frontend API" in [`API_CONTRACT.md`](API_CONTRACT.md)._
 
 ---
 

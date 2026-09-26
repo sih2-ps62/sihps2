@@ -17,7 +17,7 @@ class CargoItem(Base):
     current_station_id = Column(String, ForeignKey("stations.id"), nullable=True)
     status = Column(String, nullable=False, default="stored")  # stored / in_transit / delivered / delayed
     # Manifest details used by the frontend (/api); optional so the plain /cargo contract is unaffected.
-    manifest_id = Column(String, nullable=True)
+    manifest_id = Column(String, nullable=True, unique=True)
     origin = Column(String, nullable=True)
     destination = Column(String, nullable=True)
     created_at = Column(DateTime, nullable=False, default=utcnow)

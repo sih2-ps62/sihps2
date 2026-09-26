@@ -49,7 +49,7 @@ class ListParams:
     page: int
     page_size: int
     sort: Optional[str]
-    order: str
+    order: Optional[str]  # 'asc' / 'desc', or None when the caller did not say
     q: Optional[str]
 
 
@@ -72,7 +72,7 @@ def list_params(
         page=max(1, _int(page) or 1),
         page_size=min(MAX_PAGE_SIZE, max(1, _int(pageSize) or DEFAULT_PAGE_SIZE)),
         sort=sort,
-        order="desc" if str(order or "asc").lower() == "desc" else "asc",
+        order=str(order).lower() if str(order).lower() in ("asc", "desc") else None,
         q=q.strip() if q and q.strip() else None,
     )
 
@@ -90,9 +90,11 @@ def _sort_key(value: Any):
     return (1, value.lower() if isinstance(value, str) else value)
 
 
-def paginate(rows: list[dict], params: ListParams, *, sortable: Iterable[str], default_sort: str) -> dict:
+def paginate(rows: list[dict], params: ListParams, *, sortable: Iterable[str], default_sort: str,
+             default_order: str = "asc") -> dict:
     sort = params.sort if params.sort in set(sortable) else default_sort
-    ordered = sorted(rows, key=lambda row: _sort_key(row.get(sort)), reverse=params.order == "desc")
+    descending = (params.order or default_order) == "desc"
+    ordered = sorted(rows, key=lambda row: _sort_key(row.get(sort)), reverse=descending)
     start = (params.page - 1) * params.page_size
     return {
         "data": ordered[start:start + params.page_size],

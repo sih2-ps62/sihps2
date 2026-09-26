@@ -44,7 +44,17 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(title="PolarOps", lifespan=lifespan)
 
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+DEFAULT_CORS_ORIGINS = "http://localhost:5183,http://127.0.0.1:5183"
+
+
+def cors_origins() -> list[str]:
+    """Browser origins allowed to call the API. Set POLAROPS_CORS_ORIGINS (comma separated) for a deployed
+    frontend, or '*' to allow any origin (the Day-1 behaviour)."""
+    raw = os.getenv("POLAROPS_CORS_ORIGINS", DEFAULT_CORS_ORIGINS)
+    return [origin.strip() for origin in raw.split(",") if origin.strip()]
+
+
+app.add_middleware(CORSMiddleware, allow_origins=cors_origins(), allow_methods=["*"], allow_headers=["*"])
 
 app.include_router(expeditions.router)
 app.include_router(stations.router)

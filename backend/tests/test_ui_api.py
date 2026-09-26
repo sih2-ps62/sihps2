@@ -553,3 +553,96 @@ def test_a_brand_new_database_seeds_itself_on_startup(monkeypatch):
     with TestClient(app) as empty:
         assert empty.get("/health").json()["seeded"] is False
         assert empty.post("/api/auth/login", json={"email": "admin@polarops.io", "password": "glacieradmin26"}).status_code == 401
+
+
+# ------------------------------------------------------------------ hardening from the frontend team's checklist
+def test_repeated_wrong_passwords_lock_that_account_out_for_a_while(anonymous):
+    wrong = {"email": "admin@polarops.io", "password": "not-it"}
+    for _ in range(5):
+        assert anonymous.post("/api/auth/login", json=wrong).status_code == 401
+    locked = anonymous.post("/api/auth/login", json={**wrong, "password": "glacieradmin26"})  # even the right one
+    assert locked.status_code == 429 and int(locked.headers["Retry-After"]) >= 1
+    assert "Too many sign-in attempts" in locked.json()["error"]
+    other = anonymous.post("/api/auth/login", json={"email": "duty.officer@polarops.io", "password": "icebreaker26"})
+    assert other.status_code == 200  # a different account is unaffected
+
+
+def test_a_successful_sign_in_resets_the_failure_count(anonymous):
+    good = {"email": "admin@polarops.io", "password": "glacieradmin26"}
+    bad = {**good, "password": "nope"}
+    for _ in range(4):
+        anonymous.post("/api/auth/login", json=bad)
+    assert anonymous.post("/api/auth/login", json=good).status_code == 200
+    for _ in range(4):
+        assert anonymous.post("/api/auth/login", json=bad).status_code == 401  # not yet locked: the count restarted
+    assert anonymous.post("/api/auth/login", json=good).status_code == 200
+
+
+def test_login_throttle_window_expires():
+    from ui_api.throttle import LoginThrottle
+
+    throttle = LoginThrottle(max_failures=3, window=60)
+    key = ("10.0.0.1", "a@b.c")
+    for moment in (0, 10, 20):
+        throttle.record_failure(key, now=moment)
+    assert throttle.retry_after(key, now=30) == 31          # blocked until the oldest failure ages out
+    assert throttle.retry_after(key, now=61) == 0           # the failure at t=0 has expired -> 2 recent, allowed
+    assert throttle.retry_after(("10.0.0.2", "a@b.c"), now=30) == 0  # per address
+
+
+def test_cors_only_allows_the_frontend_origin_by_default(anonymous, monkeypatch):
+    import main
+
+    ask = {"Access-Control-Request-Method": "POST", "Access-Control-Request-Headers": "authorization,content-type"}
+    ok = anonymous.options("/api/expeditions", headers={"Origin": "http://localhost:5183", **ask})
+    assert ok.status_code == 200 and ok.headers["access-control-allow-origin"] == "http://localhost:5183"
+    assert "authorization" in ok.headers["access-control-allow-headers"].lower()
+    refused = anonymous.options("/api/expeditions", headers={"Origin": "https://evil.example", **ask})
+    assert "access-control-allow-origin" not in refused.headers
+
+    monkeypatch.setenv("POLAROPS_CORS_ORIGINS", " https://ops.example.org ,http://localhost:3000")
+    assert main.cors_origins() == ["https://ops.example.org", "http://localhost:3000"]
+    monkeypatch.setenv("POLAROPS_CORS_ORIGINS", "*")
+    assert main.cors_origins() == ["*"]
+
+
+def test_jwt_secret_can_be_set_with_either_name():
+    import subprocess
+    import sys
+
+    def secret_seen(**env):
+        import os
+
+        code = "from ui_api import security; print(security.JWT_SECRET)"
+        base = {k: v for k, v in os.environ.items() if k not in ("JWT_SECRET", "POLAROPS_JWT_SECRET")}
+        out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, check=True,
+                             env={**base, "POLAROPS_SKIP_DOTENV": "1", **env})
+        return out.stdout.strip()
+
+    assert secret_seen(JWT_SECRET="from-the-handoff-name-0123456789abcdef") == "from-the-handoff-name-0123456789abcdef"
+    assert secret_seen(POLAROPS_JWT_SECRET="polarops-name-0123456789abcdef0123", JWT_SECRET="ignored-value-0123456789abc") \
+        == "polarops-name-0123456789abcdef0123"
+    assert secret_seen() == "polarops-dev-secret-change-me-before-deploying"
+
+
+def test_the_database_itself_refuses_duplicate_manifest_ids(admin, session):
+    from sqlalchemy.exc import IntegrityError
+
+    from models.cargo import CargoItem
+
+    session.add(CargoItem(id="CGO-8001", name="a", category="x", weight_kg=1, manifest_id="MAN-DUP"))
+    session.add(CargoItem(id="CGO-8002", name="b", category="x", weight_kg=1, manifest_id=None))  # unlabelled is fine
+    session.add(CargoItem(id="CGO-8003", name="c", category="x", weight_kg=1, manifest_id=None))
+    session.commit()
+    session.add(CargoItem(id="CGO-8004", name="d", category="x", weight_kg=1, manifest_id="MAN-DUP"))
+    with pytest.raises(IntegrityError):
+        session.commit()
+    session.rollback()
+
+
+def test_audit_log_lists_newest_first_unless_told_otherwise(admin):
+    admin.post("/api/personnel/PER-002/checkin")
+    default = rows(admin.get("/api/audit-log"))
+    assert default[0]["summary"] == 'Check-in recorded for "Anders Solberg"'
+    oldest_first = rows(admin.get("/api/audit-log", params={"order": "asc", "sort": "created_at", "pageSize": 50}))
+    assert oldest_first[0]["summary"].startswith("Created expedition") and oldest_first[-1]["id"] == default[0]["id"]
