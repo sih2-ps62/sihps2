@@ -1,4 +1,4 @@
-import { LayoutDashboard, Map, Compass, Package, Boxes, Users, Siren, TrendingUp, History } from "lucide-react";
+import { LayoutDashboard, Map, Compass, Package, Boxes, Users, Siren, TrendingUp, History, FileText } from "lucide-react";
 
 export const navItems = [
   {
@@ -72,5 +72,13 @@ export const navItems = [
     icon: History,
     title: "Audit Log",
     subtitle: "Every create, update & delete across PolarOps",
+  },
+  {
+    id: "sitrep",
+    path: "/sitrep",
+    label: "SITREP",
+    icon: FileText,
+    title: "Situation Report",
+    subtitle: "One-click shift handover, compiled from live data",
   },
 ];

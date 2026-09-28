@@ -10,6 +10,8 @@ __pycache__/
 node_modules/
 dist/
 .env.local
+test-results/
+playwright-report/
 
 # Editor
 .vscode/

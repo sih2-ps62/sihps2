@@ -10,6 +10,8 @@ from models.personnel import Personnel
 from models.station import Station
 from models.user import User
 from models.waypoint import Waypoint
+from models.safety import (CheckInEvent, EmergencyResource, ExpeditionManifest, MedicalAccessGrant,
+                           MedicalPermission, MedicalProfile)
 
 __all__ = [
     "Asset", "AuditLog", "CargoItem", "EmergencyIncident", "Expedition", "expedition_personnel",

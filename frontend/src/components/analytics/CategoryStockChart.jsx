@@ -1,10 +1,9 @@
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import Reveal from "../ui/Reveal";
-
-// Recharts renders inline SVG, not CSS classes — mirrors the accent token.
-const BAR_COLOR = "#2AA9E0";
+import { useChartColors } from "../../hooks/useChartColors";
 
 export default function CategoryStockChart({ categories, delay = 0 }) {
+  const colors = useChartColors();
   return (
     <Reveal delay={delay} className="glass-card p-5">
       <div className="mb-4">
@@ -17,14 +16,14 @@ export default function CategoryStockChart({ categories, delay = 0 }) {
         <div className="h-48 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={categories} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#CFE3EE" vertical={false} />
-              <XAxis dataKey="category" tick={{ fontSize: 11, fill: "#5C7C90" }} />
-              <YAxis tick={{ fontSize: 11, fill: "#5C7C90" }} allowDecimals={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} vertical={false} />
+              <XAxis dataKey="category" tick={{ fontSize: 11, fill: colors.tick }} />
+              <YAxis tick={{ fontSize: 11, fill: colors.tick }} allowDecimals={false} />
               <Tooltip
-                contentStyle={{ borderRadius: 12, border: "1px solid #CFE3EE", fontSize: 12 }}
-                labelStyle={{ color: "#14324A", fontWeight: 600 }}
+                contentStyle={{ borderRadius: 12, border: `1px solid ${colors.tooltipBorder}`, fontSize: 12, background: colors.tooltipBg }}
+                labelStyle={{ color: colors.tooltipLabel, fontWeight: 600 }}
               />
-              <Bar dataKey="quantity" fill={BAR_COLOR} radius={[4, 4, 0, 0]} />
+              <Bar dataKey="quantity" fill={colors.accent} radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>

@@ -1,11 +1,9 @@
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import Reveal from "./Reveal";
-
-// Recharts renders inline SVG, not CSS classes — this mirrors the accent
-// token in tailwind.config.js.
-const LINE_COLOR = "#2AA9E0";
+import { useChartColors } from "../../hooks/useChartColors";
 
 export default function TrendChart({ title, subtitle, data, dataKey, yLabel, delay = 0 }) {
+  const colors = useChartColors();
   return (
     <Reveal delay={delay} className="glass-card p-5">
       <div className="mb-4">
@@ -18,14 +16,14 @@ export default function TrendChart({ title, subtitle, data, dataKey, yLabel, del
         <div className="h-48 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#CFE3EE" vertical={false} />
-              <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#5C7C90" }} />
-              <YAxis tick={{ fontSize: 11, fill: "#5C7C90" }} allowDecimals={false} label={{ value: yLabel, angle: -90, position: "insideLeft", fontSize: 11, fill: "#5C7C90" }} />
+              <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} vertical={false} />
+              <XAxis dataKey="date" tick={{ fontSize: 11, fill: colors.tick }} />
+              <YAxis tick={{ fontSize: 11, fill: colors.tick }} allowDecimals={false} label={{ value: yLabel, angle: -90, position: "insideLeft", fontSize: 11, fill: colors.tick }} />
               <Tooltip
-                contentStyle={{ borderRadius: 12, border: "1px solid #CFE3EE", fontSize: 12 }}
-                labelStyle={{ color: "#14324A", fontWeight: 600 }}
+                contentStyle={{ borderRadius: 12, border: `1px solid ${colors.tooltipBorder}`, fontSize: 12, background: colors.tooltipBg }}
+                labelStyle={{ color: colors.tooltipLabel, fontWeight: 600 }}
               />
-              <Line type="monotone" dataKey={dataKey} stroke={LINE_COLOR} strokeWidth={2} dot={{ r: 3 }} />
+              <Line type="monotone" dataKey={dataKey} stroke={colors.accent} strokeWidth={2} dot={{ r: 3 }} />
             </LineChart>
           </ResponsiveContainer>
         </div>

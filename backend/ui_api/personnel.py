@@ -17,6 +17,9 @@ from rules.overdue_checkin import evaluate_overdue
 from ui_api.common import ListParams, blank_to_none, list_params, paginate, record_audit, require_fields, search
 from ui_api.security import Principal, current_user, require_admin
 from ui_api.views import PERSONNEL_STATUS_DB, personnel_ui_status, personnel_view, station_index
+from schemas import CheckInBody
+from safety import checkin_view, record_checkin, serialize_write
+from models.safety import CheckInEvent, EmergencyResource, MedicalAccessGrant, MedicalProfile
 
 router = APIRouter(prefix="/personnel", tags=["ui: personnel"], dependencies=[Depends(current_user)])
 
@@ -102,20 +105,30 @@ def update_personnel(personnel_id: str, body: PersonnelBody, db: Session = Depen
 
 
 @router.post("/{personnel_id}/checkin")
-def check_in(personnel_id: str, db: Session = Depends(get_db), user: Principal = Depends(current_user)):
+def check_in(personnel_id: str, body: Optional[CheckInBody] = None, db: Session = Depends(get_db), user: Principal = Depends(current_user)):
+    serialize_write(db)
     person = get_or_404(db, Personnel, personnel_id, "Personnel record")
-    person.last_checkin = utcnow()
-    if person.status == "overdue":
-        person.status = person.prior_status or "at_base"
-        person.prior_status = None
+    events = record_checkin(db, person, body.station_id if body else None, body.observed_at if body else None)
     record_audit(db, user, "update", "personnel", person.id, f'Check-in recorded for "{person.name}"')
+    for event in events:
+        if event.outcome == "deviation":
+            record_audit(db, user, "alert", "expedition", event.expedition_id,
+                         f"Route deviation: {person.id} checked in at {event.station_id}; expected {event.expected_station_id}")
     db.commit()
-    return {"data": personnel_view(person, station_index(db))}
+    return {"data": personnel_view(person, station_index(db)), "checkins": [checkin_view(db, e) for e in events]}
 
 
 @router.delete("/{personnel_id}", status_code=204)
 def delete_personnel(personnel_id: str, db: Session = Depends(get_db), user: Principal = Depends(require_admin)):
     person = get_or_404(db, Personnel, personnel_id, "Personnel record")
+    if db.scalars(select(Expedition).where(Expedition.status == "in_progress", Expedition.personnel.any(id=person.id))).first():
+        raise HTTPException(409, "Unassign this person from active expeditions before removing their record.")
+    if db.get(MedicalProfile, person.id):
+        raise HTTPException(409, "This person has a restricted medical registration. Contact the medical data custodian before deletion.")
+    db.query(CheckInEvent).filter_by(personnel_id=person.id).delete()
+    db.query(MedicalProfile).filter_by(personnel_id=person.id).delete()
+    db.query(MedicalAccessGrant).filter_by(scope=f"profile:{person.id}").delete()
+    db.query(EmergencyResource).filter_by(resource_type="personnel", resource_id=person.id).delete()
     # Release everything that points at this person before removing them.
     db.execute(update(Expedition).where(Expedition.team_lead_id == person.id).values(team_lead_id=None))
     db.execute(update(EmergencyIncident).where(EmergencyIncident.personnel_id == person.id).values(personnel_id=None))

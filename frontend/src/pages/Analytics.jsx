@@ -2,6 +2,7 @@ import TrendChart from "../components/ui/TrendChart";
 import ExpeditionTimelineChart from "../components/analytics/ExpeditionTimelineChart";
 import PersonnelBreakdownChart from "../components/analytics/PersonnelBreakdownChart";
 import CategoryStockChart from "../components/analytics/CategoryStockChart";
+import EmissionsChart from "../components/analytics/EmissionsChart";
 import { useQuery } from "../hooks/useApi";
 import { api } from "../lib/api";
 
@@ -52,6 +53,12 @@ export default function Analytics() {
       </div>
 
       <CategoryStockChart categories={data.inventoryByCategory} delay={200} />
+
+      <EmissionsChart
+        expeditions={data.emissionsByExpedition}
+        total={data.totalEstimatedEmissionsKg}
+        delay={240}
+      />
     </div>
   );
 }

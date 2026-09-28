@@ -18,6 +18,7 @@ from rules.overdue_checkin import evaluate_overdue
 from rules.risk_score import WEATHER_SEVERITY, compute_risk, season_for, worst_weather
 from schemas import (ExpeditionCreate, ExpeditionOut, ExpeditionStatus, ExpeditionUpdate, RiskOut,
                      WaypointIn)
+from safety import enforce_expedition_write, serialize_write, set_manifest
 
 router = APIRouter(prefix="/expeditions", tags=["expeditions"])
 
@@ -74,6 +75,9 @@ def _set_waypoints(db: Session, exp: Expedition, items: list[WaypointIn]):
     """Replace the route. Items with an id keep that waypoint (updating supplied fields); others are new.
     Waypoints left out are removed; sequence follows list order."""
     existing = {w.id: w for w in exp.waypoints}
+    supplied_ids = [w.id for w in items if w.id]
+    if len(supplied_ids) != len(set(supplied_ids)):
+        raise HTTPException(400, "A waypoint cannot appear twice in the route.")
     route: list[Waypoint] = []
     for item in items:
         if item.id:
@@ -116,6 +120,7 @@ def list_expeditions(status: Optional[ExpeditionStatus] = None, db: Session = De
 
 @router.post("", response_model=ExpeditionOut, status_code=201)
 def create_expedition(body: ExpeditionCreate, db: Session = Depends(get_db)):
+    serialize_write(db)
     exp = Expedition(
         id=next_id(db, Expedition, "EXP"),
         name=body.name,
@@ -129,6 +134,8 @@ def create_expedition(body: ExpeditionCreate, db: Session = Depends(get_db)):
     _set_waypoints(db, exp, body.waypoints)
     _set_personnel(db, exp, body.personnel_ids)
     _set_cargo(db, exp, body.cargo_ids)
+    set_manifest(db, exp, body.asset_ids, body.emergency_kit_id)
+    enforce_expedition_write(db, exp)
     db.commit()
     db.refresh(exp)
     return _serialize(exp)
@@ -142,7 +149,10 @@ def get_expedition(expedition_id: str, db: Session = Depends(get_db)):
 
 @router.patch("/{expedition_id}", response_model=ExpeditionOut)
 def update_expedition(expedition_id: str, body: ExpeditionUpdate, db: Session = Depends(get_db)):
+    serialize_write(db)
     exp = get_or_404(db, Expedition, expedition_id, "Expedition")
+    previous_status = exp.status
+    previously_reached = {w.id for w in exp.waypoints if w.status == "reached"}
     changes = body.model_dump(exclude_unset=True)
 
     for field in ("name", "start_date", "end_date", "status"):
@@ -158,6 +168,12 @@ def update_expedition(expedition_id: str, body: ExpeditionUpdate, db: Session = 
         _set_personnel(db, exp, body.personnel_ids)
     if body.cargo_ids is not None:
         _set_cargo(db, exp, body.cargo_ids)
+
+    if body.asset_ids is not None:
+        set_manifest(db, exp, body.asset_ids, body.emergency_kit_id)
+    elif "emergency_kit_id" in changes:
+        raise HTTPException(400, "Send asset_ids with emergency_kit_id to update the manifest.")
+    enforce_expedition_write(db, exp, previous_status, previously_reached, body.personnel_ids is not None)
 
     db.commit()
     db.refresh(exp)

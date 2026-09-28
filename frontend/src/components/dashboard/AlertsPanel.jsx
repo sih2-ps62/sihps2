@@ -16,20 +16,21 @@ export default function AlertsPanel() {
       Promise.all([
         api.get("/emergencies", { status: "Open", pageSize: 5, sort: "reported_at", order: "desc" }),
         api.get("/inventory", { lowStock: "true", pageSize: 5 }),
+        api.get("/safety/alerts"),
       ]),
     []
   );
 
   const feed = (() => {
     if (!data) return [];
-    const [emergencies, lowStock] = data;
+    const [emergencies, lowStock, safety] = data;
     const emergencyRows = (emergencies?.data ?? []).map((e) => ({
       id: `emergency-${e.id}`,
       severity: e.severity === "critical" ? "critical" : "warning",
       text: e.title,
       meta: e.station_name || "Unassigned",
       timestamp: e.reported_at,
-      to: "/emergency",
+      to: `/emergency/${e.id}`,
     }));
     const stockRows = (lowStock?.data ?? []).map((item) => ({
       id: `inventory-${item.id}`,
@@ -39,7 +40,16 @@ export default function AlertsPanel() {
       timestamp: item.updated_at,
       to: "/inventory",
     }));
-    return [...emergencyRows, ...stockRows]
+    const deviations = (safety?.data?.route_deviations || []).map((e) => ({
+      id: `route-${e.id}`, severity: "warning", text: `Off-plan check-in: ${e.personnel_name}`,
+      meta: `${e.station_name} · expected ${e.expected_station_name}`, timestamp: e.timestamp,
+      to: e.expedition_id ? `/expeditions/${e.expedition_id}` : "/emergency",
+    }));
+    const conflicts = (safety?.data?.resource_conflicts || []).map((c) => ({
+      id: `conflict-${c.resource_type}-${c.resource_id}`, severity: "critical", text: `Resource conflict: ${c.resource_name}`,
+      meta: c.incident_ids.join(", "), timestamp: new Date().toISOString(), to: `/emergency/${c.incident_ids[0]}`,
+    }));
+    return [...conflicts, ...deviations, ...emergencyRows, ...stockRows]
       .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
       .slice(0, 6);
   })();

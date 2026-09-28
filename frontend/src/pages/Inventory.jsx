@@ -10,6 +10,8 @@ import StatusBadge from "../components/ui/StatusBadge";
 import StatStrip from "../components/ui/StatStrip";
 import NewInventoryModal from "../components/inventory/NewInventoryModal";
 import StockLevelChart from "../components/inventory/StockLevelChart";
+import ResupplySuggestions from "../components/inventory/ResupplySuggestions";
+import AssetRegister from "../components/inventory/AssetRegister";
 import { useListState } from "../hooks/useListState";
 import { useQuery } from "../hooks/useApi";
 import { api } from "../lib/api";
@@ -76,6 +78,9 @@ export default function Inventory() {
       <StatStrip items={statItemsWithValues} delay={0} />
 
       {chartResult?.data?.length > 0 && <StockLevelChart items={chartResult.data} delay={40} />}
+
+      <ResupplySuggestions delay={60} />
+      <AssetRegister />
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-2">

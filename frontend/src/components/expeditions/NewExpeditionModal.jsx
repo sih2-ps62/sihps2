@@ -52,8 +52,6 @@ export default function NewExpeditionModal({ isOpen, onClose, stations, onCreate
           <Field label="Status">
             <select className={inputClass} value={form.status} onChange={update("status")}>
               <option>Planned</option>
-              <option>Active</option>
-              <option>Completed</option>
             </select>
           </Field>
           <Field label="Region">
@@ -63,6 +61,8 @@ export default function NewExpeditionModal({ isOpen, onClose, stations, onCreate
             </select>
           </Field>
         </div>
+
+        <p className="text-xs text-text-secondary">New expeditions start as Planned. Open the expedition to assign crew, attach its emergency kit and pass the departure gate.</p>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Start date">
             <input type="date" className={inputClass} value={form.start_date} onChange={update("start_date")} />

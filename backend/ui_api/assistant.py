@@ -21,7 +21,7 @@ from models.expedition import Expedition
 from models.inventory import InventoryItem
 from models.personnel import Personnel
 from rules.escalation import evaluate_escalation
-from rules.overdue_checkin import evaluate_overdue
+from rules.overdue_checkin import OVERDUE_AFTER_HOURS, evaluate_overdue
 from ui_api.security import current_user
 from ui_api.views import (cargo_view, emergency_view, expedition_view, inventory_view, is_low_stock, personnel_view,
                           station_index)
@@ -31,8 +31,8 @@ router = APIRouter(prefix="/assistant", tags=["ui: assistant"], dependencies=[De
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models"
 GEMINI_ATTEMPTS = 3
-# The frontend flags a field person overdue after a day without a check-in; the assistant uses the same line.
-OVERDUE_HOURS = float(os.getenv("POLAROPS_UI_OVERDUE_HOURS", "24"))
+# One check-in window across the assistant, roster and departure gate.
+OVERDUE_HOURS = OVERDUE_AFTER_HOURS
 
 SYSTEM_PREFIX = (
     "You are the PolarOps Assistant, embedded in a polar research logistics dashboard used by duty officers at "

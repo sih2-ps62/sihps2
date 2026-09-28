@@ -36,9 +36,11 @@ def get_analytics(db: Session = Depends(get_db)):
 
     expeditions = sorted(db.execute(select(Expedition)).scalars(), key=lambda e: e.start_date)
     timeline = []
+    emissions_by_expedition = []
     for exp in expeditions:
         view = expedition_view(exp)
         timeline.append({key: view[key] for key in ("id", "name", "status", "region", "start_date", "end_date")})
+        emissions_by_expedition.append({key: view[key] for key in ("id", "name", "estimated_emissions_kg")})
 
     people = Counter(personnel_ui_status(p) for p in db.execute(select(Personnel)).scalars())
 
@@ -55,4 +57,7 @@ def get_analytics(db: Session = Depends(get_db)):
         "expeditionTimeline": timeline,
         "personnelBreakdown": [{"status": status, "count": n} for status, n in sorted(people.items())],
         "inventoryByCategory": [{"category": category, **totals} for category, totals in sorted(stock.items())],
+        # Estimated CO2 footprint (emissions.py) of each expedition's cargo movement, real station distances.
+        "emissionsByExpedition": emissions_by_expedition,
+        "totalEstimatedEmissionsKg": round(sum(e["estimated_emissions_kg"] for e in emissions_by_expedition), 1),
     }

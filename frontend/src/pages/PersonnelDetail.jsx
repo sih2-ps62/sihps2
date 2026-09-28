@@ -10,6 +10,7 @@ import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 import { formatRelativeTime } from "../lib/format";
 import { isOverdueCheckin } from "../lib/compoundRisk";
+import MedicalQuickCard from "../components/safety/MedicalQuickCard";
 
 const STATUS_TONE = { "In Field": "ok", "On Leave": "neutral", Base: "neutral" };
 
@@ -19,13 +20,16 @@ export default function PersonnelDetail() {
   const { isAdmin } = useAuth();
   const { showToast } = useToast();
 
-  const { data, isLoading, refetch } = useQuery(() => api.get(`/personnel/${id}`), [id]);
+  const { data, error, refetch } = useQuery(() => api.get(`/personnel/${id}`), [id]);
   const { data: stationsResult } = useQuery(() => api.get("/stations"), []);
   const stations = stationsResult?.data ?? [];
   const person = data?.data;
 
   const [isEditing, setIsEditing] = useState(false);
   const [form, setForm] = useState(null);
+  const [checkinStation, setCheckinStation] = useState("");
+  const [checkingIn, setCheckingIn] = useState(false);
+  const [checkinMessage, setCheckinMessage] = useState("");
 
   useEffect(() => {
     if (person) setForm({ status: person.status, station_id: person.station_id || "" });
@@ -43,12 +47,17 @@ export default function PersonnelDetail() {
   };
 
   const handleCheckIn = async () => {
+    setCheckingIn(true); setCheckinMessage("");
     try {
-      await api.post(`/personnel/${id}/checkin`);
-      showToast("Check-in recorded.");
+      const result = await api.post(`/personnel/${id}/checkin`, { station_id: checkinStation || null });
+      const deviation = result?.checkins?.find((e) => e.outcome === "deviation");
+      setCheckinMessage(result?.queued ? "Check-in queued; it is not yet confirmed by the server." : deviation ? `Route deviation: expected ${deviation.expected_station_name}, reported at ${deviation.station_name}. Duty review required.` : checkinStation ? "Station check-in recorded and compared with the planned route." : "Check-in recorded without a location. Route comparison was not possible.");
+      showToast(result?.queued ? "Check-in queued." : "Check-in recorded.");
       refetch();
     } catch (err) {
       showToast(err.message, { variant: "error" });
+    } finally {
+      setCheckingIn(false);
     }
   };
 
@@ -63,7 +72,8 @@ export default function PersonnelDetail() {
     }
   };
 
-  if (isLoading || !person || !form) {
+  if (error) return <DetailShell backTo="/personnel" backLabel="Back to Personnel" title="Personnel unavailable"><p role="alert" className="text-status-critical">{error.message}</p><button onClick={refetch} className="text-accent">Retry</button></DetailShell>;
+  if (!person || !form) {
     return (
       <DetailShell backTo="/personnel" backLabel="Back to Personnel" title="Loading…">
         <p className="text-sm text-text-secondary">Fetching personnel details…</p>
@@ -83,6 +93,7 @@ export default function PersonnelDetail() {
           <button
             type="button"
             onClick={handleCheckIn}
+            disabled={checkingIn}
             className="focus-ring flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-text-secondary transition-colors duration-150 hover:border-accent hover:text-accent"
           >
             <CalendarCheck size={14} strokeWidth={1.75} />
@@ -176,6 +187,15 @@ export default function PersonnelDetail() {
           </div>
         </div>
       )}
+      <section className="space-y-3 border-t border-border pt-4">
+        <h2 className="text-sm font-semibold">Report a station check-in</h2>
+        <p className="text-xs text-text-secondary">Choose the station actually reported. Active expedition check-ins are compared with the next pending waypoint; mismatches create a reviewable safety alert.</p>
+        <div className="flex flex-wrap items-end gap-3"><div className="min-w-48 flex-1"><Field label="Reported station"><select className={inputClass} value={checkinStation} onChange={(e) => setCheckinStation(e.target.value)}>
+          <option value="">Location not reported</option>{stations.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+        </select></Field></div><button disabled={checkingIn} onClick={handleCheckIn} className="focus-ring rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{checkingIn ? "Recording…" : "Record check-in"}</button></div>
+        {checkinMessage && <p role="status" className="rounded-xl border border-border bg-accent-soft p-3 text-sm">{checkinMessage}</p>}
+      </section>
+      <MedicalQuickCard key={id} kind="profile" recordId={id} />
     </DetailShell>
   );
 }

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Siren, ShieldAlert, Clock, CheckCircle2 } from "lucide-react";
 import Button from "../components/ui/Button";
 import StatStrip from "../components/ui/StatStrip";
@@ -10,6 +11,7 @@ import { api } from "../lib/api";
 import { formatRelativeTime } from "../lib/format";
 import { useToast } from "../context/ToastContext";
 import { buildConditions, computeCompoundRisks } from "../lib/compoundRisk";
+import RouteDeviations from "../components/safety/RouteDeviations";
 
 const emergencyStatItems = [
   { id: "open", statKey: "openEmergencies", label: "Open Emergencies", icon: ShieldAlert },
@@ -23,8 +25,9 @@ export default function Emergency() {
   const { showToast } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState("Open");
+  const { data: safety, refetch: refreshSafety } = useQuery(() => api.get("/safety/alerts"), []);
 
-  const { data: statsResult } = useQuery(() => api.get("/stats"), []);
+  const { data: statsResult, refetch: refreshStats } = useQuery(() => api.get("/stats"), []);
   const statItemsWithValues = emergencyStatItems.map((item) => ({
     ...item,
     value: statsResult?.emergency?.[item.statKey],
@@ -44,7 +47,7 @@ export default function Emergency() {
   // being counted here if it's still genuinely open elsewhere.
   const { data: inventoryResult } = useQuery(() => api.get("/inventory", { pageSize: 100 }), []);
   const { data: personnelResult } = useQuery(() => api.get("/personnel", { pageSize: 100, status: "In Field" }), []);
-  const { data: openEmergenciesResult } = useQuery(() => api.get("/emergencies", { status: "Open", pageSize: 100 }), []);
+  const { data: openEmergenciesResult, refetch: refreshOpen } = useQuery(() => api.get("/emergencies", { status: "Open", pageSize: 100 }), []);
 
   const compoundRisks = computeCompoundRisks(
     buildConditions({
@@ -59,6 +62,7 @@ export default function Emergency() {
       await api.patch(`/emergencies/${id}`, { status: "Resolved" });
       showToast("Marked as resolved.");
       refetch();
+      refreshStats(); refreshOpen(); refreshSafety();
     } catch (err) {
       showToast(err.message, { variant: "error" });
     }
@@ -69,6 +73,11 @@ export default function Emergency() {
   return (
     <div className="flex flex-col gap-4 px-6 py-6 md:px-8">
       <StatStrip items={statItemsWithValues} delay={0} />
+      <RouteDeviations events={safety?.data?.route_deviations || []} onReviewed={refreshSafety} />
+      {!!safety?.data?.resource_conflicts?.length && <div className="glass-card border-status-critical/40 p-4 text-sm text-status-critical">
+        <p className="font-semibold">Emergency resource conflicts need attention</p>
+        {safety.data.resource_conflicts.map((c) => <p key={`${c.resource_type}-${c.resource_id}`}>{c.resource_name} is shared by {c.incident_ids.map((id) => <Link key={id} to={`/emergency/${id}`} className="ml-2 underline">{id}</Link>)}</p>)}
+      </div>}
       <div className="flex justify-end">
         <Button variant="critical" icon={Siren} onClick={() => setIsModalOpen(true)}>
           Report Emergency
@@ -115,11 +124,12 @@ export default function Emergency() {
             <div key={row.id} className="flex items-center gap-3 rounded-xl border border-border/60 p-3">
               <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${severityDot[row.severity]}`} aria-hidden="true" />
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-text-primary">{row.title}</p>
+                <Link to={`/emergency/${row.id}`} className="focus-ring block truncate rounded text-sm font-medium text-text-primary hover:text-accent">{row.title}</Link>
                 <p className="truncate text-xs text-text-secondary">
                   {row.station_name || "Unassigned"} · {formatRelativeTime(row.reported_at)}
                 </p>
               </div>
+              <Link to={`/emergency/${row.id}`} className="focus-ring rounded-lg px-2 py-1.5 text-xs font-semibold text-accent">Open case</Link>
               {row.status === "Open" ? (
                 <button
                   type="button"

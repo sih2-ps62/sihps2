@@ -94,7 +94,9 @@ export default function OfflineQueuePanel() {
           </div>
 
           <p className="mt-3 text-[11px] leading-snug text-text-secondary">
-            Simulated interruption — demonstrates queued sync. Persistent offline storage is a roadmap item.
+            Simulated interruption — the server never actually goes down. Queued writes are saved to this
+            device, so they survive a reload or crash; background sync while this tab is closed is still a
+            roadmap item.
           </p>
         </div>
       )}

@@ -3,11 +3,15 @@ import Modal from "../ui/Modal";
 import Field, { inputClass } from "../ui/FormField";
 import { api } from "../../lib/api";
 import { useToast } from "../../context/ToastContext";
+import { useQuery } from "../../hooks/useApi";
+import { useNavigate } from "react-router-dom";
 
-const EMPTY_FORM = { title: "", severity: "warning", station_id: "" };
+const EMPTY_FORM = { title: "", severity: "warning", station_id: "", personnel_id: "" };
 
 export default function ReportEmergencyModal({ isOpen, onClose, stations, onCreated }) {
   const { showToast } = useToast();
+  const navigate = useNavigate();
+  const { data: people } = useQuery(() => isOpen ? api.get("/personnel", { pageSize: 100 }) : Promise.resolve(null), [isOpen]);
   const [form, setForm] = useState(EMPTY_FORM);
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -30,10 +34,11 @@ export default function ReportEmergencyModal({ isOpen, onClose, stations, onCrea
 
     setIsSubmitting(true);
     try {
-      await api.post("/emergencies", form);
+      const result = await api.post("/emergencies", form);
       showToast("Emergency reported.");
       onCreated?.();
       handleClose();
+      navigate(`/emergency/${result.data.id}`);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -71,7 +76,12 @@ export default function ReportEmergencyModal({ isOpen, onClose, stations, onCrea
           </Field>
         </div>
 
-        {error && <p className="text-xs font-medium text-status-critical">{error}</p>}
+        <Field label="Affected person (optional)"><select className={inputClass} value={form.personnel_id} onChange={update("personnel_id")}>
+          <option value="">Station-level incident</option>
+          {(people?.data || []).map((p) => <option key={p.id} value={p.id}>{p.name} · {p.role}</option>)}
+        </select></Field>
+        <p className="text-xs text-text-secondary">A person-specific incident provides a gated critical-info card for authorized medical responders.</p>
+        {error && <p role="alert" className="text-xs font-medium text-status-critical">{error}</p>}
 
         <button
           type="submit"

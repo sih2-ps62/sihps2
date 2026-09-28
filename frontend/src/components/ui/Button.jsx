@@ -8,7 +8,7 @@ export default function Button({ variant = "primary", icon: Icon, children, clas
   return (
     <button
       type="button"
-      className={`focus-ring flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors duration-200 ${variants[variant]} ${className}`}
+      className={`focus-ring flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-50 ${variants[variant]} ${className}`}
       {...rest}
     >
       {Icon && <Icon size={16} strokeWidth={2} />}

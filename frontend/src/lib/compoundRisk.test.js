@@ -13,12 +13,16 @@ describe("isOverdueCheckin", () => {
     expect(isOverdueCheckin({ status: "In Field", last_checkin: null }, NOW)).toBe(true);
   });
 
-  it("is false for an In Field person checked in under 24h ago", () => {
+  it("is false for an In Field person checked in under 6h ago", () => {
     expect(isOverdueCheckin({ status: "In Field", last_checkin: "2026-09-26 10:00:00" }, NOW)).toBe(false);
   });
 
-  it("is true for an In Field person checked in over 24h ago", () => {
+  it("is true for an In Field person checked in over 6h ago", () => {
     expect(isOverdueCheckin({ status: "In Field", last_checkin: "2026-09-25 10:00:00" }, NOW)).toBe(true);
+  });
+  it("uses the same configured check-in window as the departure gate", () => {
+    expect(isOverdueCheckin({ status: "In Field", last_checkin: "2026-09-26T04:00:00Z" }, NOW)).toBe(true);
+    expect(isOverdueCheckin({ status: "In Field", last_checkin: "2026-09-26T04:00:00Z", checkin_window_hours: 12 }, NOW)).toBe(false);
   });
 });
 

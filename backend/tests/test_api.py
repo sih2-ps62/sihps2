@@ -65,12 +65,16 @@ def test_patch_waypoint_reached_and_reroute(client):
 
 
 def test_patch_status_assignments_and_cargo_replace(client):
-    updated = client.patch("/expeditions/EXP-0002", json={"status": "in_progress", "personnel_ids": ["PER-006"], "cargo_ids": []}).json()
-    assert updated["status"] == "in_progress" and updated["personnel_ids"] == ["PER-006"] and updated["cargo_ids"] == []
+    blocked = client.patch("/expeditions/EXP-0002", json={"status": "in_progress", "personnel_ids": ["PER-006"], "cargo_ids": []})
+    assert blocked.status_code == 409 and "Buddy team" in blocked.json()["detail"]
+    # Planning may have one person; launching may not. Failed launch did not persist any partial changes.
+    assert client.get("/expeditions/EXP-0002").json()["status"] == "planned"
+    updated = client.patch("/expeditions/EXP-0002", json={"personnel_ids": ["PER-006"], "cargo_ids": []}).json()
+    assert updated["status"] == "planned" and updated["personnel_ids"] == ["PER-006"] and updated["cargo_ids"] == []
     assert client.get("/cargo", params={"expedition_id": "EXP-0002"}).json() == []
     assert client.patch("/expeditions/EXP-0002", json={"status": "flying"}).status_code == 422
     assert client.patch("/expeditions/EXP-0002", json={"end_date": "2000-01-01"}).status_code == 400
-    assert len(client.get("/expeditions", params={"status": "in_progress"}).json()) == 2
+    assert len(client.get("/expeditions", params={"status": "in_progress"}).json()) == 1
 
 
 def test_risk_differs_between_bad_weather_and_calm_routes(client):

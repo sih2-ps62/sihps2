@@ -43,7 +43,7 @@ export class ApiError extends Error {
   }
 }
 
-async function rawRequest(path, { method = "GET", body, params } = {}) {
+async function rawRequest(path, { method = "GET", body, params, headers: extraHeaders } = {}) {
   const url = new URL(`${API_BASE}${path}`, window.location.origin);
   if (params) {
     Object.entries(params).forEach(([key, value]) => {
@@ -52,7 +52,7 @@ async function rawRequest(path, { method = "GET", body, params } = {}) {
   }
 
   const token = getToken();
-  const headers = { "Content-Type": "application/json" };
+  const headers = { "Content-Type": "application/json", ...extraHeaders };
   if (token) headers.Authorization = `Bearer ${token}`;
 
   let response;
@@ -60,6 +60,7 @@ async function rawRequest(path, { method = "GET", body, params } = {}) {
     response = await fetch(url, {
       method,
       headers,
+      cache: "no-store",
       body: body ? JSON.stringify(body) : undefined,
     });
   } catch {
@@ -80,11 +81,95 @@ async function rawRequest(path, { method = "GET", body, params } = {}) {
   return data;
 }
 
-// --- Polar Blackout Mode (simulated connectivity loss) ---------------------
-// This is a SIMULATION: the backend never actually goes down. While active,
-// write calls (POST/PATCH) are queued here in memory instead of being sent.
-// Reads (GET) always pass through live. The queue does not persist across a
-// page reload — true offline-first persistence is a roadmap item, not this.
+// --- Polar Blackout Mode (offline-first, simulated trigger) ----------------
+// The trigger is still a SIMULATION: the backend never actually goes down, only the frontend pretends writes
+// can't go through. What's real now: queued writes are persisted to IndexedDB (not just an in-memory array),
+// so they survive a page reload or crash instead of silently vanishing — and on the next load, this module
+// restores them and resumes blackout mode automatically if it was still on. Still not built: a service-worker
+// background sync that replays the queue while this tab is closed — that stays a roadmap item.
+
+const DB_NAME = "polarops-offline";
+const DB_VERSION = 1;
+const STORE = "pending-writes";
+const BLACKOUT_KEY = "polarops.blackout";
+
+function openDb() {
+  if (typeof indexedDB === "undefined") return Promise.resolve(null);
+  return new Promise((resolve) => {
+    try {
+      const req = indexedDB.open(DB_NAME, DB_VERSION);
+      req.onupgradeneeded = () => {
+        if (!req.result.objectStoreNames.contains(STORE)) req.result.createObjectStore(STORE, { keyPath: "id" });
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => resolve(null);
+    } catch {
+      resolve(null);
+    }
+  });
+}
+
+async function idbGetAll() {
+  const db = await openDb();
+  if (!db) return [];
+  return new Promise((resolve) => {
+    try {
+      const req = db.transaction(STORE, "readonly").objectStore(STORE).getAll();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => resolve([]);
+    } catch {
+      resolve([]);
+    }
+  });
+}
+
+async function idbPut(item) {
+  const db = await openDb();
+  if (!db) return;
+  return new Promise((resolve) => {
+    try {
+      const tx = db.transaction(STORE, "readwrite");
+      tx.objectStore(STORE).put(item);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => resolve();
+    } catch {
+      resolve();
+    }
+  });
+}
+
+async function idbDelete(id) {
+  const db = await openDb();
+  if (!db) return;
+  return new Promise((resolve) => {
+    try {
+      const tx = db.transaction(STORE, "readwrite");
+      tx.objectStore(STORE).delete(id);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => resolve();
+    } catch {
+      resolve();
+    }
+  });
+}
+
+function loadBlackoutFlag() {
+  try {
+    const raw = localStorage.getItem(BLACKOUT_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveBlackoutFlag(active, startedAt) {
+  try {
+    if (active) localStorage.setItem(BLACKOUT_KEY, JSON.stringify({ active, startedAt }));
+    else localStorage.removeItem(BLACKOUT_KEY);
+  } catch {
+    // localStorage unavailable — the blackout flag just won't survive a reload
+  }
+}
 
 let blackoutMode = false;
 let blackoutStartedAt = null;
@@ -110,11 +195,15 @@ export function getBlackoutState() {
   };
 }
 
-function queueWrite(method, path, body) {
+async function queueWrite(method, path, body) {
+  if (/^\/personnel\/[^/]+\/checkin$/.test(path)) {
+    body = { ...body, observed_at: body?.observed_at || new Date().toISOString() };
+  }
   const item = { id: crypto.randomUUID(), method, url: path, body, timestamp: Date.now(), status: "waiting" };
   pendingQueue.push(item);
+  await idbPut(item);
   notifyBlackoutListeners();
-  return Promise.resolve({ queued: true, id: item.id });
+  return { queued: true, id: item.id };
 }
 
 async function replayItem(item) {
@@ -126,10 +215,12 @@ async function replayItem(item) {
     notifyBlackoutListeners();
     await new Promise((resolve) => setTimeout(resolve, 800));
     pendingQueue = pendingQueue.filter((queued) => queued.id !== item.id);
+    await idbDelete(item.id);
     notifyBlackoutListeners();
   } catch (err) {
     item.status = "failed";
     item.error = err.message;
+    await idbPut(item);
     notifyBlackoutListeners();
   }
 }
@@ -153,18 +244,41 @@ export function retryQueueItem(id) {
 
 export function toggleBlackout() {
   blackoutMode = !blackoutMode;
-  if (blackoutMode) {
-    blackoutStartedAt = Date.now();
-  } else {
-    blackoutStartedAt = null;
-    drainQueue();
-  }
+  blackoutStartedAt = blackoutMode ? Date.now() : null;
+  saveBlackoutFlag(blackoutMode, blackoutStartedAt);
+  if (!blackoutMode) drainQueue();
   notifyBlackoutListeners();
   return blackoutMode;
 }
 
+// Restore any writes left over from a crash or a closed tab — a page refresh mid-blackout used to lose the
+// whole queue; now it's still there when the app reopens, and blackout mode resumes if it was still active.
+let restored = false;
+export async function restoreOfflineQueue() {
+  if (restored) return;
+  restored = true;
+  const persisted = await idbGetAll();
+  pendingQueue = persisted
+    .sort((a, b) => a.timestamp - b.timestamp)
+    .map((item) => (item.status === "syncing" ? { ...item, status: "waiting" } : item));
+  const flag = loadBlackoutFlag();
+  if (flag?.active) {
+    blackoutMode = true;
+    blackoutStartedAt = flag.startedAt;
+  }
+  notifyBlackoutListeners();
+  if (!blackoutMode && pendingQueue.length > 0) drainQueue(); // recover from a crash mid-drain
+}
+
+if (typeof window !== "undefined") restoreOfflineQueue();
+
 async function request(path, options = {}) {
   const method = options.method || "GET";
+  const sensitive = path.startsWith("/medical/") || path.startsWith("/auth/");
+  const safetyAction = path.startsWith("/expeditions") || path.startsWith("/emergencies") || path.startsWith("/safety/") || path.startsWith("/assets");
+  if (blackoutMode && (sensitive || (safetyAction && method !== "GET"))) {
+    throw new ApiError("Restore the connection before this action. Safety decisions and medical access require live verification.", 0);
+  }
   if (blackoutMode && (method === "POST" || method === "PATCH")) {
     return queueWrite(method, path, options.body);
   }
@@ -172,8 +286,8 @@ async function request(path, options = {}) {
 }
 
 export const api = {
-  get: (path, params) => request(path, { params }),
-  post: (path, body) => request(path, { method: "POST", body }),
-  patch: (path, body) => request(path, { method: "PATCH", body }),
+  get: (path, params, options) => request(path, { ...options, params }),
+  post: (path, body, options) => request(path, { ...options, method: "POST", body }),
+  patch: (path, body, options) => request(path, { ...options, method: "PATCH", body }),
   delete: (path) => request(path, { method: "DELETE" }),
 };

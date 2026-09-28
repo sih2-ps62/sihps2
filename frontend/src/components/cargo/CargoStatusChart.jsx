@@ -1,16 +1,15 @@
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import Reveal from "../ui/Reveal";
-
-// Recharts renders inline SVG, not CSS classes — these mirror the
-// status.ok / status.warning / border / text-secondary tokens in tailwind.config.js.
-const STATUS_COLORS = {
-  Delivered: "#15A874",
-  "In Transit": "#5C7C90",
-  Delayed: "#D97706",
-  Pending: "#CFE3EE",
-};
+import { useChartColors } from "../../hooks/useChartColors";
 
 export default function CargoStatusChart({ stats, delay = 0 }) {
+  const colors = useChartColors();
+  const STATUS_COLORS = {
+    Delivered: colors.ok,
+    "In Transit": colors.secondary,
+    Delayed: colors.warning,
+    Pending: colors.muted,
+  };
   const data = [
     { name: "Delivered", value: stats.delivered },
     { name: "In Transit", value: stats.inTransit },
@@ -32,8 +31,8 @@ export default function CargoStatusChart({ stats, delay = 0 }) {
                 <Cell key={entry.name} fill={STATUS_COLORS[entry.name]} />
               ))}
             </Pie>
-            <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #CFE3EE", fontSize: 12 }} />
-            <Legend wrapperStyle={{ fontSize: 12, color: "#5C7C90" }} />
+            <Tooltip contentStyle={{ borderRadius: 12, border: `1px solid ${colors.tooltipBorder}`, fontSize: 12, background: colors.tooltipBg }} />
+            <Legend wrapperStyle={{ fontSize: 12, color: colors.tick }} />
           </PieChart>
         </ResponsiveContainer>
       </div>

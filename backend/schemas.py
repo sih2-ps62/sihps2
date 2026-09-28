@@ -90,6 +90,8 @@ class ExpeditionCreate(BaseModel):
     waypoints: list[WaypointIn] = []
     personnel_ids: list[str] = []
     cargo_ids: list[str] = []
+    asset_ids: list[str] = []
+    emergency_kit_id: Optional[str] = None
 
     @model_validator(mode="after")
     def _dates_in_order(self):
@@ -108,6 +110,8 @@ class ExpeditionUpdate(BaseModel):
     waypoints: Optional[list[WaypointIn]] = None
     personnel_ids: Optional[list[str]] = None
     cargo_ids: Optional[list[str]] = None
+    asset_ids: Optional[list[str]] = None
+    emergency_kit_id: Optional[str] = None
 
 
 class RiskOut(BaseModel):
@@ -211,6 +215,11 @@ class PersonnelOut(ORMModel):
     current_station_id: Optional[str] = None
     status: PersonnelStatus
     last_checkin: UtcDateTime
+
+
+class CheckInBody(BaseModel):
+    station_id: Optional[str] = None
+    observed_at: Optional[datetime] = None
 
 
 # ---------------------------------------------------------------- Emergency (Param)

@@ -5,30 +5,32 @@ export function useQuery(fetcher, deps = []) {
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const fetcherRef = useRef(fetcher);
+  const requestVersion = useRef(0);
   fetcherRef.current = fetcher;
 
   const refetch = useCallback(() => {
-    let cancelled = false;
+    const version = ++requestVersion.current;
+    const load = fetcherRef.current;
     setIsLoading(true);
     setError(null);
-    fetcherRef
-      .current()
+    Promise.resolve().then(load)
       .then((result) => {
-        if (!cancelled) setData(result);
+        if (requestVersion.current === version) setData(result);
       })
       .catch((err) => {
-        if (!cancelled) setError(err);
+        if (requestVersion.current === version) setError(err);
       })
       .finally(() => {
-        if (!cancelled) setIsLoading(false);
+        if (requestVersion.current === version) setIsLoading(false);
       });
     return () => {
-      cancelled = true;
+      if (requestVersion.current === version) requestVersion.current += 1;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
 
   useEffect(() => refetch(), [refetch]);
+  useEffect(() => () => { requestVersion.current += 1; }, []);
 
   return { data, error, isLoading, refetch };
 }

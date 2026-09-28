@@ -4,8 +4,10 @@
 # database and rule engine as the plan's endpoints - see docs/API_CONTRACT.md, section "Frontend API".
 from fastapi import APIRouter
 
-from ui_api import analytics, assistant, audit_log, auth, cargo, emergencies, expeditions, inventory, personnel
+from ui_api import (analytics, assistant, audit_log, auth, cargo, comms_risk, emergencies, expeditions, inventory,
+                   personnel, resupply, sitrep)
 from ui_api import stations, stats
+from ui_api import medical, safety
 
 router = APIRouter(prefix="/api")
 
@@ -16,5 +18,5 @@ def api_health():
 
 
 for module in (auth, stations, expeditions, cargo, inventory, personnel, emergencies, stats, analytics, audit_log,
-               assistant):
+               assistant, comms_risk, sitrep, resupply, medical, safety):
     router.include_router(module.router)

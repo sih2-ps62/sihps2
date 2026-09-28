@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { Menu, RefreshCw, Search, Settings, WifiOff } from "lucide-react";
+import { Menu, MoonStar, RefreshCw, Search, Settings, Sun, WifiOff } from "lucide-react";
 import { Link } from "react-router-dom";
 import { getBlackoutState, subscribeBlackout, toggleBlackout } from "../../lib/api";
+import { useTheme } from "../../context/ThemeContext";
 
 function formatTimer(totalSeconds) {
   const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, "0");
@@ -48,13 +49,31 @@ function BlackoutStatusPill() {
   );
 }
 
+function ThemeToggle() {
+  const { theme, toggleTheme } = useTheme();
+  const isDark = theme === "dark";
+  return (
+    <button
+      type="button"
+      onClick={toggleTheme}
+      title={isDark ? "Switch to Frost (light)" : "Switch to Aurora (dark)"}
+      aria-label="Toggle theme"
+      aria-pressed={isDark}
+      className="focus-ring flex h-9 shrink-0 items-center justify-center gap-2 rounded-xl border border-border bg-surface px-3 text-accent transition-colors duration-200 hover:text-text-primary"
+    >
+      {isDark ? <Sun size={16} strokeWidth={1.75} /> : <MoonStar size={16} strokeWidth={1.75} />}
+      <span className="hidden text-xs font-semibold xl:inline">{isDark ? "Aurora" : "Frost"}</span>
+    </button>
+  );
+}
+
 export default function Topbar({ title, subtitle, onOpenMenu, onOpenCommandPalette }) {
   return (
     <header
       style={{ animationDelay: "40ms" }}
       className="animate-fade-slide-up flex flex-col gap-4 border-b border-border px-6 py-5 sm:flex-row sm:items-center sm:justify-between md:px-8"
     >
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <button
           type="button"
           onClick={onOpenMenu}
@@ -85,6 +104,7 @@ export default function Topbar({ title, subtitle, onOpenMenu, onOpenCommandPalet
           <RefreshCw size={16} strokeWidth={1.75} />
           <span>Last synced —</span>
         </div>
+        <ThemeToggle />
         <Link
           to="/settings"
           aria-label="Settings"

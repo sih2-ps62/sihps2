@@ -84,7 +84,7 @@ export default function Settings() {
             </div>
             <div>
               <p className="text-sm font-medium text-text-primary">Email alerts</p>
-              <p className="text-xs text-text-secondary">Get emailed when a new emergency is reported</p>
+              <p className="text-xs text-text-secondary">Saved preference. Email delivery is not connected in this demo.</p>
             </div>
           </div>
           <Toggle checked={emailAlerts} onChange={toggleEmailAlerts} label="Email alerts" />
@@ -97,7 +97,7 @@ export default function Settings() {
             </div>
             <div>
               <p className="text-sm font-medium text-text-primary">Sound alerts</p>
-              <p className="text-xs text-text-secondary">Play a sound for critical status changes</p>
+              <p className="text-xs text-text-secondary">Saved preference. Sound notifications are not connected in this demo.</p>
             </div>
           </div>
           <Toggle checked={soundAlerts} onChange={toggleSoundAlerts} label="Sound alerts" />

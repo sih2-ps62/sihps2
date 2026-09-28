@@ -6,6 +6,11 @@ FastAPI + SQLite backend with a server-side rule engine, and a React + Vite +
 Tailwind + Leaflet frontend. Team of six: **Backend** — Maisha, Jalak, Param ·
 **Frontend** — Shrey, Akshit, Tanvi.
 
+> **Safety and theme update:** see [`docs/SAFETY_CONTROLS.md`](docs/SAFETY_CONTROLS.md) for the enforced
+> buddy/launch gate, station route deviations, emergency resource reservations, separately gated medical
+> quick-cards, Aurora/Frost effects, test commands and an SIH demonstration walkthrough. Existing databases
+> receive additive tables without reseeding.
+
 > **Presenting?** Read [`docs/DEMO_GUIDE.md`](docs/DEMO_GUIDE.md): what every feature does, where to find it,
 > a 5-minute demo script, and what is real vs. simulated.
 > **Developing?** [`docs/PROJECT_CONTEXT.md`](docs/PROJECT_CONTEXT.md) is the handoff and
@@ -19,7 +24,7 @@ Tailwind + Leaflet frontend. Team of six: **Backend** — Maisha, Jalak, Param �
 | Backend — frontend API (`/api`): sign-in, roles, audit log, analytics, assistant, pagination | **Done** |
 | Rule engine — low-stock, overdue check-in, route risk score, emergency escalation | **Done** (server-side, plain Python) |
 | Frontend — every screen (dashboard, map, expeditions, cargo, inventory, personnel, emergency, analytics, audit log, settings), login, assistant, offline-queue simulation | **Done**, wired to the FastAPI backend |
-| Automated tests | Backend: 106 passing · Frontend: 39 passing |
+| Automated tests | Backend and frontend regression suites plus Chromium workflow tests; see `docs/SAFETY_CONTROLS.md` |
 | Public hosting | Not set up (runs locally) |
 
 ## Prerequisites
@@ -60,6 +65,7 @@ A brand-new database seeds itself on first start. Sign in with:
 |------|-------|----------|
 | Duty officer | `duty.officer@polarops.io` | `icebreaker26` |
 | Admin (can delete) | `admin@polarops.io` | `glacieradmin26` |
+| Demo medical officer (separate clinical permission) | `medic@polarops.io` | `polarmedic26` |
 
 To run the pieces separately: `npm run dev:client` (frontend) and, in `backend/`,
 `uvicorn main:app --reload --port 8000`.
@@ -84,8 +90,9 @@ Frontend: `VITE_API_URL` (default `http://localhost:8000/api`) — see `frontend
 ## Tests
 
 ```bash
-cd backend && python -m pytest     # 106 tests, throwaway database
-cd frontend && npm test            # 39 tests
+cd backend && python -m pytest     # throwaway database
+cd frontend && npm test
+npm run test:e2e                   # isolated API + Chromium browser workflows
 ```
 
 Backend tests never touch `polarops.db`.

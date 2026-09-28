@@ -13,6 +13,7 @@ from models.asset import Asset
 from models.expedition import Expedition
 from models.station import Station
 from schemas import AssetCondition, AssetCreate, AssetOut, AssetUpdate, HolderType
+from safety import serialize_write
 
 router = APIRouter(prefix="/assets", tags=["assets"])
 
@@ -46,7 +47,10 @@ def list_assets(
 
 @router.post("", response_model=AssetOut, status_code=201)
 def create_asset(body: AssetCreate, db: Session = Depends(get_db)):
+    serialize_write(db)
     _check_holder(db, body.current_holder_type, body.current_holder_id)
+    if body.current_holder_type == "expedition" and body.condition != "operational":
+        raise HTTPException(409, "Only operational assets can be assigned to an expedition.")
     asset = Asset(id=next_id(db, Asset, "AST"), **body.model_dump())
     db.add(asset)
     db.commit()
@@ -62,6 +66,7 @@ def maintenance_due(db: Session = Depends(get_db)):
 
 @router.patch("/{asset_id}", response_model=AssetOut)
 def update_asset(asset_id: str, body: AssetUpdate, db: Session = Depends(get_db)):
+    serialize_write(db)
     asset = get_or_404(db, Asset, asset_id, "Asset")
     changes = body.model_dump(exclude_unset=True)
 

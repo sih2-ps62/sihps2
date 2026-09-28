@@ -3,13 +3,16 @@
 // Pure logic, no fetching — Emergency.jsx builds the `conditions` input from
 // already-fetched inventory/personnel/emergency data.
 
-const OVERDUE_HOURS = 24;
+const OVERDUE_HOURS = 6;
 
 export function isOverdueCheckin(person, now = Date.now()) {
   if (person.status !== "In Field") return false;
+  if (person.operational_status === "emergency") return false;
+  if (person.operational_status === "overdue") return true;
   if (!person.last_checkin) return true;
-  const last = new Date(person.last_checkin.replace(" ", "T") + "Z").getTime();
-  return (now - last) / (1000 * 60 * 60) > OVERDUE_HOURS;
+  const stamp = person.last_checkin.replace(" ", "T");
+  const last = new Date(stamp.endsWith("Z") ? stamp : `${stamp}Z`).getTime();
+  return (now - last) / (1000 * 60 * 60) > (person.checkin_window_hours ?? OVERDUE_HOURS);
 }
 
 export function buildConditions({ inventory = [], personnel = [], emergencies = [], now = Date.now() }) {

@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from db import get_db, utcnow
 from models.cargo import CargoItem
+from models.asset import Asset
 from models.emergency import EmergencyIncident
 from models.expedition import Expedition
 from models.inventory import InventoryItem
@@ -52,7 +53,7 @@ def get_stats(db: Session = Depends(get_db)):
             "activeExpeditions": sum(e.status == "in_progress" for e in expeditions),
             "personnelInField": people.count("In Field"),
             "lowStockAlerts": sum(is_low_stock(i) for i in inventory),
-            "assetsNeedingMaintenance": sum(bool(i.needs_maintenance) for i in inventory),
+            "assetsNeedingMaintenance": sum(a.condition == "needs_maintenance" for a in _all(db, Asset)),
             "openEmergencies": len(open_incidents),
         },
         "cargo": {

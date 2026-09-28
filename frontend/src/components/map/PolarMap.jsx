@@ -1,27 +1,30 @@
 import { useEffect, useMemo, useState } from "react";
-import { MapContainer, TileLayer, Marker, Popup, Polyline, Tooltip } from "react-leaflet";
+import { MapContainer, TileLayer, LayersControl, Marker, Popup, Polyline, Tooltip } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { Maximize2 } from "lucide-react";
 import Reveal from "../ui/Reveal";
 import { useQuery } from "../../hooks/useApi";
 import { api } from "../../lib/api";
+import { weatherMeta } from "../../lib/weather";
+import { dayNightMeta } from "../../lib/daynight";
+import { useChartColors } from "../../hooks/useChartColors";
 
-const stationIcon = L.divIcon({
-  className: "",
-  html: '<span class="block h-3.5 w-3.5 rounded-full bg-accent ring-2 ring-white" style="box-shadow: 0 0 0 3px rgba(42,169,224,0.3)"></span>',
-  iconSize: [14, 14],
-  iconAnchor: [7, 7],
-  popupAnchor: [0, -7],
-});
-
-// Leaflet path styling is inline SVG, not CSS classes — these mirror the
-// accent / status.ok / text-secondary tokens in tailwind.config.js.
-const ROUTE_STYLE = {
-  Active: { color: "#2AA9E0", weight: 3, opacity: 0.85 },
-  Planned: { color: "#5C7C90", weight: 2, opacity: 0.7, dashArray: "6 6" },
-  Completed: { color: "#15A874", weight: 2, opacity: 0.45 },
-};
+// Leaflet icons/paths are inline SVG/HTML, not CSS classes, so they need literal colour values — reuses the
+// same theme-aware palette the analytics charts use (useChartColors), rather than a third hardcoded copy.
+const stationIconCache = {};
+function stationIcon(color) {
+  if (!stationIconCache[color]) {
+    stationIconCache[color] = L.divIcon({
+      className: "",
+      html: `<span class="block h-3.5 w-3.5 rounded-full ring-2 ring-white" style="background:${color}; box-shadow: 0 0 0 3px ${color}4D"></span>`,
+      iconSize: [14, 14],
+      iconAnchor: [7, 7],
+      popupAnchor: [0, -7],
+    });
+  }
+  return stationIconCache[color];
+}
 
 export default function PolarMap({
   height = "420px",
@@ -32,6 +35,14 @@ export default function PolarMap({
   showRoutes = false,
 }) {
   const [map, setMap] = useState(null);
+  const colors = useChartColors();
+  const readinessColor = { ready: colors.ok, watch: colors.warning, critical: colors.critical };
+  const routeStyle = {
+    Active: { color: colors.accent, weight: 3, opacity: 0.85 },
+    Planned: { color: colors.secondary, weight: 2, opacity: 0.7, dashArray: "6 6" },
+    Completed: { color: colors.ok, weight: 2, opacity: 0.45 },
+  };
+
   const { data: stationsResult } = useQuery(() => api.get("/stations"), []);
   const { data: expeditionsResult } = useQuery(
     () => (showRoutes ? api.get("/expeditions", { pageSize: 100 }) : Promise.resolve(null)),
@@ -108,35 +119,67 @@ export default function PolarMap({
         scrollWheelZoom
         className="h-full w-full"
       >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-          className="polar-tiles"
-        />
+        <LayersControl position="bottomright">
+          <LayersControl.BaseLayer checked name="Frost">
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+              className="polar-tiles"
+            />
+          </LayersControl.BaseLayer>
+          <LayersControl.BaseLayer name="Satellite">
+            <TileLayer
+              attribution='Tiles &copy; Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS user community'
+              url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+              maxNativeZoom={19}
+            />
+          </LayersControl.BaseLayer>
+        </LayersControl>
         {routes.map((route) => (
-          <Polyline key={route.id} positions={route.positions} pathOptions={ROUTE_STYLE[route.status]}>
+          <Polyline key={route.id} positions={route.positions} pathOptions={routeStyle[route.status]}>
             <Tooltip sticky>
               {route.name} · {route.status}
             </Tooltip>
           </Polyline>
         ))}
-        {stations.map((station) => (
-          <Marker
-            key={station.id}
-            position={[station.lat, station.lng]}
-            icon={stationIcon}
-            ref={(el) => {
-              if (!markerRefs) return;
-              if (el) markerRefs.current[station.id] = el;
-              else delete markerRefs.current[station.id];
-            }}
-          >
-            <Popup>
-              <p className="text-sm font-semibold text-text-primary">{station.name}</p>
-              <p className="text-xs text-text-secondary">{station.region}</p>
-            </Popup>
-          </Marker>
-        ))}
+        {stations.map((station) => {
+          const weather = weatherMeta(station.weather_code);
+          const WeatherIcon = weather.icon;
+          const dayNight = dayNightMeta(station.day_night);
+          const DayNightIcon = dayNight?.icon;
+          return (
+            <Marker
+              key={station.id}
+              position={[station.lat, station.lng]}
+              icon={stationIcon(readinessColor[station.readiness_band] ?? colors.accent)}
+              ref={(el) => {
+                if (!markerRefs) return;
+                if (el) markerRefs.current[station.id] = el;
+                else delete markerRefs.current[station.id];
+              }}
+            >
+              <Popup>
+                <p className="text-sm font-semibold text-text-primary">{station.name}</p>
+                <p className="text-xs text-text-secondary">{station.region}</p>
+                <p className="mt-1 flex items-center gap-1 text-xs text-text-secondary">
+                  <WeatherIcon size={12} strokeWidth={1.75} />
+                  {weather.label} · live
+                </p>
+                {dayNight && (
+                  <p className="mt-1 flex items-center gap-1 text-xs font-medium text-accent">
+                    <DayNightIcon size={12} strokeWidth={1.75} />
+                    {dayNight.label}
+                  </p>
+                )}
+                {station.readiness_score != null && (
+                  <p className="mt-1 text-xs font-medium" style={{ color: readinessColor[station.readiness_band] }}>
+                    Readiness {station.readiness_score}/100 · {station.readiness_band}
+                  </p>
+                )}
+              </Popup>
+            </Marker>
+          );
+        })}
       </MapContainer>
     </Reveal>
   );

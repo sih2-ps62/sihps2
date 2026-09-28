@@ -1,15 +1,10 @@
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import Reveal from "../ui/Reveal";
-
-// Recharts renders inline SVG, not CSS classes — these mirror the
-// status.ok / border / text-secondary tokens in tailwind.config.js.
-const STATUS_COLORS = {
-  "In Field": "#15A874",
-  "On Leave": "#CFE3EE",
-  Base: "#5C7C90",
-};
+import { useChartColors } from "../../hooks/useChartColors";
 
 export default function PersonnelBreakdownChart({ breakdown, delay = 0 }) {
+  const colors = useChartColors();
+  const STATUS_COLORS = { "In Field": colors.ok, "On Leave": colors.muted, Base: colors.secondary };
   const data = breakdown.map((row) => ({ name: row.status, value: row.count }));
 
   return (
@@ -26,11 +21,11 @@ export default function PersonnelBreakdownChart({ breakdown, delay = 0 }) {
             <PieChart>
               <Pie data={data} dataKey="value" nameKey="name" innerRadius={50} outerRadius={80} paddingAngle={2}>
                 {data.map((entry) => (
-                  <Cell key={entry.name} fill={STATUS_COLORS[entry.name] ?? "#CFE3EE"} />
+                  <Cell key={entry.name} fill={STATUS_COLORS[entry.name] ?? colors.muted} />
                 ))}
               </Pie>
-              <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #CFE3EE", fontSize: 12 }} />
-              <Legend wrapperStyle={{ fontSize: 12, color: "#5C7C90" }} />
+              <Tooltip contentStyle={{ borderRadius: 12, border: `1px solid ${colors.tooltipBorder}`, fontSize: 12, background: colors.tooltipBg }} />
+              <Legend wrapperStyle={{ fontSize: 12, color: colors.tick }} />
             </PieChart>
           </ResponsiveContainer>
         </div>

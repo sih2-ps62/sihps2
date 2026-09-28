@@ -371,7 +371,7 @@ def test_resolving_via_the_plan_endpoint_stamps_resolved_at_too(admin):
 def test_stats_on_the_demo_dataset(admin):
     stats = admin.get("/api/stats").json()
     assert stats["dashboard"] == {"activeExpeditions": 2, "personnelInField": 7, "lowStockAlerts": 3,
-                                  "assetsNeedingMaintenance": 2, "openEmergencies": 3}
+                                  "assetsNeedingMaintenance": 1, "openEmergencies": 3}
     assert stats["cargo"] == {"totalShipments": 6, "inTransit": 2, "delivered": 2, "delayed": 1}
     assert stats["inventory"] == {"totalSkus": 7, "lowStock": 3, "outOfStock": 0, "categories": 7}
     assert stats["personnel"] == {"totalStaff": 10, "inField": 7, "onLeave": 1, "stations": 12}
@@ -398,7 +398,8 @@ def test_average_response_time_is_null_until_something_is_resolved(admin):
 def test_analytics_series(admin):
     data = admin.get("/api/analytics").json()
     assert set(data) == {"emergenciesByDay", "responseTimeTrend", "cargoByDay", "expeditionTimeline",
-                         "personnelBreakdown", "inventoryByCategory"}
+                         "personnelBreakdown", "inventoryByCategory", "emissionsByExpedition",
+                         "totalEstimatedEmissionsKg"}
     assert [p["hours"] for p in data["responseTimeTrend"]] == [13.5, 6.0, 3.5, 9.2]
     assert sum(p["count"] for p in data["emergenciesByDay"]) == 7
     assert sum(p["count"] for p in data["cargoByDay"]) == 6 and len(data["cargoByDay"]) > 3
@@ -406,6 +407,10 @@ def test_analytics_series(admin):
     assert [e["name"] for e in data["expeditionTimeline"]][0] == "Greenland Traverse North"  # oldest start first
     assert {"id", "name", "status", "region", "start_date", "end_date"} == set(data["expeditionTimeline"][0])
     assert {c["category"] for c in data["inventoryByCategory"]} >= {"Fuel", "Power"}
+    assert {"id", "name", "estimated_emissions_kg"} == set(data["emissionsByExpedition"][0])
+    assert data["totalEstimatedEmissionsKg"] == round(
+        sum(e["estimated_emissions_kg"] for e in data["emissionsByExpedition"]), 1
+    )
 
 
 # ------------------------------------------------------------------ audit log
@@ -514,7 +519,7 @@ def test_both_seed_profiles_build_and_the_demo_one_is_the_default(admin):
 
     seed.seed(profile="plan")
     with SessionLocal() as db:
-        assert db.execute(select(func.count()).select_from(User)).scalar_one() == 2
+        assert db.execute(select(func.count()).select_from(User)).scalar_one() == 3
     assert {s["id"] for s in admin.get("/stations").json()} >= {"STN-BHARATI", "STN-POLARRESOLVE"}
     seed.seed()
     assert {s["id"] for s in admin.get("/stations").json()} >= {"vostok", "mcmurdo"}
@@ -646,3 +651,59 @@ def test_audit_log_lists_newest_first_unless_told_otherwise(admin):
     assert default[0]["summary"] == 'Check-in recorded for "Anders Solberg"'
     oldest_first = rows(admin.get("/api/audit-log", params={"order": "asc", "sort": "created_at", "pageSize": 50}))
     assert oldest_first[0]["summary"].startswith("Created expedition") and oldest_first[-1]["id"] == default[0]["id"]
+
+
+# ------------------------------------------------------------------ live weather / comms risk / mission readiness
+def test_stations_include_live_weather_and_readiness_fields(admin):
+    stations = rows(admin.get("/api/stations"))
+    assert len(stations) > 0
+    for station in stations:
+        assert station["weather_code"] in ("clear", "cloudy", "snow", "high_wind", "blizzard")
+        assert 0 <= station["readiness_score"] <= 100
+        assert station["readiness_band"] in ("critical", "watch", "ready")
+        assert station["day_night"] in ("polar_day", "polar_night", "normal")
+
+
+def test_expeditions_include_route_distance_and_estimated_emissions(admin):
+    expedition = admin.get("/api/expeditions/EXP-0001").json()["data"]
+    assert expedition["route_distance_km"] >= 0
+    assert expedition["estimated_emissions_kg"] >= 0
+    if expedition["route_distance_km"] == 0:
+        assert expedition["estimated_emissions_kg"] == 0
+
+
+def test_comms_risk_endpoint_returns_a_reading(admin):
+    reading = admin.get("/api/comms-risk").json()["data"]
+    assert reading["level"] in range(6)
+    assert reading["label"] in ("none", "minor", "moderate", "strong", "severe", "extreme")
+
+
+def test_expedition_risk_trend_is_a_forward_looking_series(admin):
+    trend = rows(admin.get("/api/expeditions/EXP-0001/risk-trend"))
+    if not trend:
+        pytest.skip("weather forecast service unreachable in this environment")
+    for point in trend:
+        assert set(point) == {"time", "weather_code", "risk_score", "risk_band"}
+        assert 0 <= point["risk_score"] <= 100
+    assert trend == sorted(trend, key=lambda p: p["time"])
+
+
+# ------------------------------------------------------------------ smart resupply
+def test_resupply_suggestions_are_shaped_and_sorted_by_distance(admin):
+    suggestions = rows(admin.get("/api/resupply-suggestions"))
+    for s in suggestions:
+        assert set(s) == {"item", "unit", "quantity", "from_station_id", "from_station_name", "from_weather_code",
+                          "to_station_id", "to_station_name", "distance_km"}
+        assert s["quantity"] > 0 and s["distance_km"] >= 0
+    assert suggestions == sorted(suggestions, key=lambda s: s["distance_km"])
+
+
+# ------------------------------------------------------------------ SITREP
+def test_sitrep_uses_the_local_engine_without_a_gemini_key(admin):
+    result = admin.get("/api/sitrep").json()
+    assert result["source"] == "local"
+    text = result["text"]
+    for header in ("OPERATIONAL SUMMARY", "STATION READINESS", "WEATHER & COMMS", "CARGO & INVENTORY",
+                  "PERSONNEL", "EMERGENCIES", "EXPEDITIONS"):
+        assert header in text
+    assert "GEMINI_API_KEY" in text  # the built-in-engine note, same convention as the assistant

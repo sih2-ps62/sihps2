@@ -1,11 +1,14 @@
 # OWNER: integration (Day 2-3)
 # Translates database rows into the shapes the frontend expects, and its status vocabulary back to the
 # plan's. Only presentation lives here - the rules (overdue, escalation, risk, low stock) stay in rules/.
+from datetime import date
 from typing import Optional
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from daynight import day_night_state
+from emissions import estimate_footprint_kg, route_distance_km
 from models.cargo import CargoItem
 from models.emergency import EmergencyIncident
 from models.expedition import Expedition
@@ -14,6 +17,7 @@ from models.personnel import Personnel
 from models.station import Station
 from routers.expeditions import _risk
 from ui_api.common import fmt_date, fmt_ts
+from rules.overdue_checkin import OVERDUE_AFTER_HOURS
 
 REGIONS = ("Antarctic", "Arctic")
 
@@ -47,7 +51,11 @@ def _station_fields(stations: dict[str, Station], station_id: Optional[str], *, 
 # ------------------------------------------------------------------ stations
 def station_view(station: Station) -> dict:
     return {"id": station.id, "name": station.name, "region": region_for(station.lat), "lat": station.lat,
-            "lng": station.lng, "type": station.type, "status": station.status}
+            "lng": station.lng, "type": station.type, "status": station.status,
+            # Real current conditions (weather.py), refreshed lazily by ui_api/stations.py on each list call.
+            "weather_code": station.weather_code,
+            # 'polar_day' / 'polar_night' / 'normal' — pure astronomy (daynight.py), not a live feed.
+            "day_night": day_night_state(station.lat, date.today())}
 
 
 # ------------------------------------------------------------------ expeditions
@@ -56,6 +64,8 @@ def expedition_view(exp: Expedition) -> dict:
     region = exp.region or (region_for(exp.waypoints[0].station.lat) if exp.waypoints else "Antarctic")
     lead = exp.team_lead.name if exp.team_lead else (exp.team_lead_name or "-")
     risk = _risk(exp)
+    distance_km = round(route_distance_km([w.station for w in exp.waypoints]), 1)
+    total_weight_kg = sum(c.weight_kg for c in exp.cargo_items)
     return {
         "id": exp.id,
         "name": exp.name,
@@ -69,6 +79,9 @@ def expedition_view(exp: Expedition) -> dict:
         "risk_score": risk["risk_score"],
         "risk_band": risk["risk_band"],
         "risk_factors": risk["risk_factors"],
+        # Real station-to-station distance (emissions.py) and the estimated footprint of its assigned cargo.
+        "route_distance_km": distance_km,
+        "estimated_emissions_kg": estimate_footprint_kg(total_weight_kg, distance_km),
     }
 
 
@@ -130,6 +143,8 @@ def personnel_view(person: Personnel, stations: dict[str, Station]) -> dict:
         "role": person.role,
         **_station_fields(stations, person.current_station_id),
         "status": personnel_ui_status(person),
+        "operational_status": person.status,
+        "checkin_window_hours": OVERDUE_AFTER_HOURS,
         "last_checkin": fmt_ts(person.last_checkin),
     }
 

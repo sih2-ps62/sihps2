@@ -12,11 +12,13 @@ from models import (Asset, AuditLog, CargoItem, EmergencyIncident, Expedition, I
                     User, Waypoint)
 from rules.low_stock import compute_status
 from ui_api.security import hash_password
+from models.safety import MedicalPermission
 
 # Demo sign-ins (shown on the frontend's login page).
 USERS = [
     ("duty.officer@polarops.io", "icebreaker26", "Duty Officer", "duty_officer"),
     ("admin@polarops.io", "glacieradmin26", "Ops Admin", "admin"),
+    ("medic@polarops.io", "polarmedic26", "Demo Medical Officer", "duty_officer"),
 ]
 
 
@@ -356,6 +358,7 @@ def seed(now: datetime | None = None, profile: str = "demo"):
         db.add_all(data["stations"])
         db.add_all(data["people"])
         db.flush()
+        db.add(MedicalPermission(user_id=users[2].id))
         db.add_all(data["expeditions"])
         db.flush()
         db.add_all(data["rest"])

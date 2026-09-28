@@ -1,21 +1,24 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
+  darkMode: "class",
   theme: {
     extend: {
       colors: {
-        canvas: "#F7FBFD",
-        surface: "rgba(255, 255, 255, 0.72)",
-        "surface-solid": "#FFFFFF",
-        border: "#CFE3EE",
-        "text-primary": "#14324A",
-        "text-secondary": "#5C7C90",
-        accent: "#2AA9E0",
-        "accent-soft": "#E4F5FC",
+        // Sourced from CSS custom properties (index.css: :root for "Frost" light, .dark for "Aurora" dark) so
+        // every component that already uses these semantic tokens re-themes for free — no per-component changes.
+        canvas: "color-mix(in srgb, var(--color-canvas) calc(<alpha-value> * 100%), transparent)",
+        surface: "color-mix(in srgb, var(--color-surface) calc(<alpha-value> * 100%), transparent)",
+        "surface-solid": "var(--color-surface-solid)",
+        border: "color-mix(in srgb, var(--color-border) calc(<alpha-value> * 100%), transparent)",
+        "text-primary": "color-mix(in srgb, var(--color-text-primary) calc(<alpha-value> * 100%), transparent)",
+        "text-secondary": "color-mix(in srgb, var(--color-text-secondary) calc(<alpha-value> * 100%), transparent)",
+        accent: "color-mix(in srgb, var(--color-accent) calc(<alpha-value> * 100%), transparent)",
+        "accent-soft": "color-mix(in srgb, var(--color-accent-soft) calc(<alpha-value> * 100%), transparent)",
         status: {
-          ok: "#15A874",
-          warning: "#D97706",
-          critical: "#DC2626",
+          ok: "color-mix(in srgb, var(--color-status-ok) calc(<alpha-value> * 100%), transparent)",
+          warning: "color-mix(in srgb, var(--color-status-warning) calc(<alpha-value> * 100%), transparent)",
+          critical: "color-mix(in srgb, var(--color-status-critical) calc(<alpha-value> * 100%), transparent)",
         },
       },
       fontFamily: {
@@ -33,8 +36,8 @@ export default {
         "2xl": "16px",
       },
       boxShadow: {
-        glass: "0 8px 24px rgba(20, 80, 120, 0.08)",
-        "glass-hover": "0 14px 32px rgba(20, 80, 120, 0.14), 0 0 0 1px rgba(42, 169, 224, 0.18)",
+        glass: "var(--shadow-glass)",
+        "glass-hover": "var(--shadow-glass-hover)",
       },
       backdropBlur: {
         glass: "16px",

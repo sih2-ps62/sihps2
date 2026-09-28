@@ -1,6 +1,5 @@
 import { useCallback, useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
-import ClickSnowflakes from "../ui/ClickSnowflakes";
 import CommandPalette from "../ui/CommandPalette";
 import OfflineQueuePanel from "../ui/OfflineQueuePanel";
 import AssistantPanel from "../ui/AssistantPanel";
@@ -25,7 +24,6 @@ export default function AppLayout() {
 
   return (
     <div className="mx-auto flex min-h-screen max-w-content">
-      <ClickSnowflakes />
       <CommandPalette isOpen={isPaletteOpen} onClose={() => setIsPaletteOpen(false)} />
       <OfflineQueuePanel />
       <AssistantPanel />

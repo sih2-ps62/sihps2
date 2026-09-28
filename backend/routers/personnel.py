@@ -10,7 +10,8 @@ from sqlalchemy.orm import Session
 from db import get_db, get_or_404, utcnow
 from models.personnel import Personnel
 from rules.overdue_checkin import evaluate_overdue
-from schemas import PersonnelOut, PersonnelStatus
+from schemas import CheckInBody, PersonnelOut, PersonnelStatus
+from safety import record_checkin, serialize_write
 
 router = APIRouter(prefix="/personnel", tags=["personnel"])
 
@@ -31,11 +32,9 @@ def list_personnel(
 
 
 @router.post("/{personnel_id}/checkin", response_model=PersonnelOut)
-def check_in(personnel_id: str, db: Session = Depends(get_db)):
+def check_in(personnel_id: str, body: Optional[CheckInBody] = None, db: Session = Depends(get_db)):
+    serialize_write(db)
     person = get_or_404(db, Personnel, personnel_id, "Personnel")
-    person.last_checkin = utcnow()
-    if person.status == "overdue":
-        person.status = person.prior_status or "at_base"
-        person.prior_status = None
+    record_checkin(db, person, body.station_id if body else None, body.observed_at if body else None)
     db.commit()
     return person
