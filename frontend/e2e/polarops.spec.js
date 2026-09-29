@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 
 const API = "http://127.0.0.1:8001/api";
 async function session(page, request, medical = false) {
-  const response = await request.post(`${API}/auth/login`, { data: { email: medical ? "medic@polarops.io" : "admin@polarops.io", password: medical ? "polarmedic26" : "glacieradmin26" } });
+  const response = await request.post(`${API}/auth/login`, { data: { email: medical ? "medic@polarops.io" : "admin@polarops.io", password: medical ? "medic123" : "admin123" } });
   expect(response.ok()).toBeTruthy();
   const login = await response.json();
   await page.addInitScript((data) => {
@@ -90,7 +90,7 @@ test("medical registration, incident quick-card and lock-on-blur", async ({ page
   const headers = await session(page, request, true);
   await page.goto("/personnel/PER-002");
   await page.getByLabel("Reason for clinical access").fill("Pre-departure clinical registration");
-  await page.getByLabel("Confirm your password").fill("polarmedic26");
+  await page.getByLabel("Confirm your password").fill("medic123");
   await page.getByRole("button", { name: "Unlock critical information" }).click();
   await page.getByLabel("Blood type", { exact: true }).selectOption("O+");
   await page.getByLabel("Allergies", { exact: true }).fill("Browser test allergy");
@@ -101,7 +101,7 @@ test("medical registration, incident quick-card and lock-on-blur", async ({ page
   const incident = (await response.json()).data;
   await page.goto(`/emergency/${incident.id}`);
   await page.getByLabel("Reason for clinical access").fill("Responding to this person's incident");
-  await page.getByLabel("Confirm your password").fill("polarmedic26");
+  await page.getByLabel("Confirm your password").fill("medic123");
   await page.getByRole("button", { name: "Unlock critical information" }).click();
   await expect(page.getByText("Browser test allergy", { exact: true })).toBeVisible();
   await page.evaluate(() => window.dispatchEvent(new Event("blur")));

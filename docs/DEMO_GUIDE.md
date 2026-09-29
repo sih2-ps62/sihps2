@@ -40,8 +40,8 @@ venv\Scripts\python seed.py
 
 | Person | Email | Password | Can do |
 |---|---|---|---|
-| Duty Officer | duty.officer@polarops.io | icebreaker26 | view, create, edit |
-| Admin | admin@polarops.io | glacieradmin26 | everything, **including delete** |
+| Duty Officer | duty.officer@polarops.io | demo123 | view, create, edit |
+| Admin | admin@polarops.io | admin123 | everything, **including delete** |
 
 **Numbers you should see on a fresh reset:** 2 active expeditions · 7 people in the field · 3 low-stock items ·
 2 items needing maintenance · 3 open emergencies.

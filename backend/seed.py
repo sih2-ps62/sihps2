@@ -16,9 +16,9 @@ from models.safety import MedicalPermission
 
 # Demo sign-ins (shown on the frontend's login page).
 USERS = [
-    ("duty.officer@polarops.io", "icebreaker26", "Duty Officer", "duty_officer"),
-    ("admin@polarops.io", "glacieradmin26", "Ops Admin", "admin"),
-    ("medic@polarops.io", "polarmedic26", "Demo Medical Officer", "duty_officer"),
+    ("duty.officer@polarops.io", "demo123", "Duty Officer", "duty_officer"),
+    ("admin@polarops.io", "admin123", "Ops Admin", "admin"),
+    ("medic@polarops.io", "medic123", "Demo Medical Officer", "duty_officer"),
 ]
 
 

@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 
 const API = "http://127.0.0.1:8001/api";
 async function login(page, request) {
-  const response = await request.post(`${API}/auth/login`, { data: { email: "admin@polarops.io", password: "glacieradmin26" } });
+  const response = await request.post(`${API}/auth/login`, { data: { email: "admin@polarops.io", password: "admin123" } });
   expect(response.ok()).toBeTruthy();
   const session = await response.json();
   await page.addInitScript((data) => {

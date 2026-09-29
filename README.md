@@ -67,9 +67,9 @@ A brand-new database seeds itself on first start. Sign in with:
 
 | Role | Email | Password |
 |------|-------|----------|
-| Duty officer | `duty.officer@polarops.io` | `icebreaker26` |
-| Admin (can delete) | `admin@polarops.io` | `glacieradmin26` |
-| Demo medical officer (separate clinical permission) | `medic@polarops.io` | `polarmedic26` |
+| Duty officer | `duty.officer@polarops.io` | `demo123` |
+| Admin (can delete) | `admin@polarops.io` | `admin123` |
+| Demo medical officer (separate clinical permission) | `medic@polarops.io` | `medic123` |
 
 To run the pieces separately: `npm run dev:client` (frontend) and, in `backend/`,
 `uvicorn main:app --reload --port 8000`.

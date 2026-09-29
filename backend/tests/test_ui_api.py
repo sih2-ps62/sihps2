@@ -24,7 +24,7 @@ def by_id(items):
 
 # ------------------------------------------------------------------ auth
 def test_login_returns_a_token_and_the_user(admin):
-    body = admin.post("/api/auth/login", json={"email": "Duty.Officer@polarops.io ", "password": "icebreaker26"}).json()
+    body = admin.post("/api/auth/login", json={"email": "Duty.Officer@polarops.io ", "password": "demo123"}).json()
     assert body["user"] == {"id": 1, "email": "duty.officer@polarops.io", "name": "Duty Officer", "role": "duty_officer"}
     claims = jwt.decode(body["token"], JWT_SECRET, algorithms=["HS256"])
     assert claims["role"] == "duty_officer" and claims["exp"] > time.time()
@@ -59,9 +59,9 @@ def test_garbage_and_expired_tokens_are_rejected(anonymous):
 
 
 def test_passwords_are_salted_and_verified():
-    first, second = hash_password("icebreaker26"), hash_password("icebreaker26")
-    assert first != second and "icebreaker26" not in first
-    assert verify_password("icebreaker26", first) and not verify_password("icebreaker27", first)
+    first, second = hash_password("demo123"), hash_password("demo123")
+    assert first != second and "demo123" not in first
+    assert verify_password("demo123", first) and not verify_password("icebreaker27", first)
     assert not verify_password("x", "plaintext-not-a-hash")
 
 
@@ -549,7 +549,7 @@ def test_a_brand_new_database_seeds_itself_on_startup(monkeypatch):
 
     Base.metadata.drop_all(engine)
     with TestClient(app) as fresh:
-        signed_in = fresh.post("/api/auth/login", json={"email": "admin@polarops.io", "password": "glacieradmin26"})
+        signed_in = fresh.post("/api/auth/login", json={"email": "admin@polarops.io", "password": "admin123"})
         assert signed_in.status_code == 200
         assert fresh.get("/health").json()["seeded"] is True
 
@@ -557,7 +557,7 @@ def test_a_brand_new_database_seeds_itself_on_startup(monkeypatch):
     Base.metadata.drop_all(engine)
     with TestClient(app) as empty:
         assert empty.get("/health").json()["seeded"] is False
-        assert empty.post("/api/auth/login", json={"email": "admin@polarops.io", "password": "glacieradmin26"}).status_code == 401
+        assert empty.post("/api/auth/login", json={"email": "admin@polarops.io", "password": "admin123"}).status_code == 401
 
 
 # ------------------------------------------------------------------ hardening from the frontend team's checklist
@@ -565,15 +565,15 @@ def test_repeated_wrong_passwords_lock_that_account_out_for_a_while(anonymous):
     wrong = {"email": "admin@polarops.io", "password": "not-it"}
     for _ in range(5):
         assert anonymous.post("/api/auth/login", json=wrong).status_code == 401
-    locked = anonymous.post("/api/auth/login", json={**wrong, "password": "glacieradmin26"})  # even the right one
+    locked = anonymous.post("/api/auth/login", json={**wrong, "password": "admin123"})  # even the right one
     assert locked.status_code == 429 and int(locked.headers["Retry-After"]) >= 1
     assert "Too many sign-in attempts" in locked.json()["error"]
-    other = anonymous.post("/api/auth/login", json={"email": "duty.officer@polarops.io", "password": "icebreaker26"})
+    other = anonymous.post("/api/auth/login", json={"email": "duty.officer@polarops.io", "password": "demo123"})
     assert other.status_code == 200  # a different account is unaffected
 
 
 def test_a_successful_sign_in_resets_the_failure_count(anonymous):
-    good = {"email": "admin@polarops.io", "password": "glacieradmin26"}
+    good = {"email": "admin@polarops.io", "password": "admin123"}
     bad = {**good, "password": "nope"}
     for _ in range(4):
         anonymous.post("/api/auth/login", json=bad)

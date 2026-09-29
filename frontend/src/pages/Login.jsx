@@ -1,20 +1,40 @@
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Eye, EyeOff, LogIn, Snowflake } from "lucide-react";
+import { Check, Copy, Eye, EyeOff, LogIn, Snowflake } from "lucide-react";
 import Reveal from "../components/ui/Reveal";
 import { useAuth } from "../context/AuthContext";
+import { useToast } from "../context/ToastContext";
+
+const DEMO_ACCOUNTS = [
+  { role: "Duty Officer", email: "duty.officer@polarops.io", password: "demo123" },
+  { role: "Admin", email: "admin@polarops.io", password: "admin123", note: "can delete" },
+  { role: "Medical Officer", email: "medic@polarops.io", password: "medic123", note: "clinical access" },
+];
 
 export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const from = location.state?.from?.pathname || "/";
+  const { showToast } = useToast();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [copiedKey, setCopiedKey] = useState("");
+
+  const copyValue = async (key, value, label) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopiedKey(key);
+      showToast(`Copied ${label}`);
+      setTimeout(() => setCopiedKey((prev) => (prev === key ? "" : prev)), 1500);
+    } catch {
+      showToast("Couldn't copy — select and copy it manually.", { variant: "error" });
+    }
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -112,11 +132,50 @@ export default function Login() {
           </button>
         </form>
 
-        <p className="mt-6 text-center text-xs text-text-secondary">
-          Demo access — duty.officer@polarops.io / icebreaker26
-          <br />
-          Admin demo — admin@polarops.io / glacieradmin26
-        </p>
+        <div className="mt-6 space-y-2 border-t border-border pt-4">
+          <p className="text-center text-xs font-medium text-text-secondary">Demo accounts</p>
+          {DEMO_ACCOUNTS.map((account) => (
+            <div
+              key={account.email}
+              className="rounded-lg border border-border bg-surface-solid/60 px-3 py-2 text-xs"
+            >
+              <p className="mb-1 font-semibold text-text-primary">
+                {account.role}
+                {account.note && <span className="ml-1 font-normal text-text-secondary">({account.note})</span>}
+              </p>
+              <div className="flex items-center justify-between gap-2">
+                <span className="truncate font-mono text-text-secondary">{account.email}</span>
+                <button
+                  type="button"
+                  onClick={() => copyValue(`${account.email}-email`, account.email, `${account.role} email`)}
+                  aria-label={`Copy ${account.role} email`}
+                  className="focus-ring shrink-0 rounded p-1 text-text-secondary hover:text-accent"
+                >
+                  {copiedKey === `${account.email}-email` ? (
+                    <Check size={13} strokeWidth={2} className="text-status-ok" />
+                  ) : (
+                    <Copy size={13} strokeWidth={1.75} />
+                  )}
+                </button>
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="truncate font-mono text-text-secondary">{account.password}</span>
+                <button
+                  type="button"
+                  onClick={() => copyValue(`${account.email}-password`, account.password, `${account.role} password`)}
+                  aria-label={`Copy ${account.role} password`}
+                  className="focus-ring shrink-0 rounded p-1 text-text-secondary hover:text-accent"
+                >
+                  {copiedKey === `${account.email}-password` ? (
+                    <Check size={13} strokeWidth={2} className="text-status-ok" />
+                  ) : (
+                    <Copy size={13} strokeWidth={1.75} />
+                  )}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
       </Reveal>
     </div>
   );

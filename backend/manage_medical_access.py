@@ -21,7 +21,7 @@ def main():
         account = db.scalars(select(User).where(User.email == email)).first()
         if account is None and args.action == "demo-medic":
             account = User(email=email, name="Demo Medical Officer", role="duty_officer",
-                           password_hash=hash_password("polarmedic26"))
+                           password_hash=hash_password("medic123"))
             db.add(account)
             db.flush()
         if account is None:

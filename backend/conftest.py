@@ -47,7 +47,7 @@ def admin():
 
     seed.seed(profile="demo")
     with TestClient(app) as test_client:
-        yield _sign_in(test_client, "admin@polarops.io", "glacieradmin26")
+        yield _sign_in(test_client, "admin@polarops.io", "admin123")
 
 
 @pytest.fixture()
@@ -55,7 +55,7 @@ def officer(admin):
     """A second client on the same database, signed in as the duty officer (no delete rights)."""
     from main import app
 
-    return _sign_in(TestClient(app), "duty.officer@polarops.io", "icebreaker26")
+    return _sign_in(TestClient(app), "duty.officer@polarops.io", "demo123")
 
 
 @pytest.fixture()

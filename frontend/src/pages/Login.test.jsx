@@ -4,12 +4,15 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import Login from "./Login";
 import { AuthProvider } from "../context/AuthContext";
+import { ToastProvider } from "../context/ToastContext";
 
 function renderLogin() {
   return render(
     <MemoryRouter initialEntries={["/login"]}>
       <AuthProvider>
-        <Login />
+        <ToastProvider>
+          <Login />
+        </ToastProvider>
       </AuthProvider>
     </MemoryRouter>
   );

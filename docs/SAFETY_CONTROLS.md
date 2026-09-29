@@ -25,7 +25,7 @@ The default check-in window is **6 hours**, shared with the existing overdue rul
 
 Newly seeded databases include a separate **demo medical account**:
 
-`medic@polarops.io` / `polarmedic26`
+`medic@polarops.io` / `medic123`
 
 Admin and duty-officer accounts have **no medical permission** by default. Medical access requires all of:
 

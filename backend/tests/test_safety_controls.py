@@ -33,14 +33,14 @@ def incident(client, **extra):
 
 def medic_client():
     client = TestClient(app)
-    login = client.post("/api/auth/login", json={"email": "medic@polarops.io", "password": "polarmedic26"})
+    login = client.post("/api/auth/login", json={"email": "medic@polarops.io", "password": "medic123"})
     assert login.status_code == 200
     client.headers["Authorization"] = "Bearer " + login.json()["token"]
     return client
 
 
 def unlock(client, scope):
-    response = client.post("/api/medical/access", json={"scope": scope, "password": "polarmedic26", "reason": "Responding to this incident"})
+    response = client.post("/api/medical/access", json={"scope": scope, "password": "medic123", "reason": "Responding to this incident"})
     assert response.status_code == 200, response.text
     return {"X-Medical-Access": response.json()["data"]["access_token"]}
 
@@ -173,7 +173,7 @@ def test_medical_requires_independent_permission_even_for_admin(admin, officer):
     assert not admin.get("/api/medical/permission").json()["data"]["permitted"]
     for client in (admin, officer):
         assert client.get(f"/api/medical/records/incident/{case}").status_code == 403
-        assert client.post("/api/medical/access", json={"scope": f"incident:{case}", "password": "glacieradmin26", "reason": "Urgent case response"}).status_code == 403
+        assert client.post("/api/medical/access", json={"scope": f"incident:{case}", "password": "admin123", "reason": "Urgent case response"}).status_code == 403
 
 
 def test_medical_registration_quick_card_scope_expiry_revocation_and_no_leaks(admin, session):
