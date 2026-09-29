@@ -11,7 +11,7 @@ export default function ThemeDiscovery() {
   useEffect(() => {
     try { stopped.current = sessionStorage.getItem(KEY) === "done"; } catch { /* memory fallback */ }
     const show = () => { if (!stopped.current) setVisible(true); };
-    const timers = [setTimeout(show, 6000), setTimeout(() => setVisible(false), 24000), setTimeout(show, 180000)];
+    const timers = [setTimeout(show, 10000), setTimeout(() => setVisible(false), 24000), setTimeout(show, 180000)];
     return () => timers.forEach(clearTimeout);
   }, []);
   const stop = () => {

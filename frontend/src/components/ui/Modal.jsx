@@ -3,12 +3,14 @@ import { X } from "lucide-react";
 
 export default function Modal({ isOpen, onClose, title, children }) {
   const closeRef = useRef(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   useEffect(() => {
     if (!isOpen) return undefined;
     document.body.style.overflow = "hidden";
     const handleKeyDown = (event) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") onCloseRef.current();
     };
     document.addEventListener("keydown", handleKeyDown);
     closeRef.current?.focus();
@@ -16,7 +18,12 @@ export default function Modal({ isOpen, onClose, title, children }) {
       document.body.style.overflow = "";
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isOpen, onClose]);
+    // Only re-run when the modal opens/closes — not when the caller passes
+    // a new inline `onClose` reference on every re-render (e.g. while the
+    // user is typing in a form inside the modal), which was stealing focus
+    // back to the close button on every keystroke.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
   if (!isOpen) return null;
 

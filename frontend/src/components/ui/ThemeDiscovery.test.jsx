@@ -10,13 +10,13 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); });
 
-it("offers Aurora at six seconds and once more at three minutes", () => {
+it("offers Frost at ten seconds and once more at three minutes", () => {
   render(<ThemeProvider><ThemeDiscovery /></ThemeProvider>);
-  act(() => vi.advanceTimersByTime(5999));
+  act(() => vi.advanceTimersByTime(9999));
   expect(screen.queryByLabelText("Try another theme")).toBeNull();
   act(() => vi.advanceTimersByTime(1));
   expect(screen.getByLabelText("Try another theme")).toBeInTheDocument();
-  act(() => vi.advanceTimersByTime(18000));
+  act(() => vi.advanceTimersByTime(14000));
   expect(screen.queryByLabelText("Try another theme")).toBeNull();
   act(() => vi.advanceTimersByTime(156000));
   expect(screen.getByLabelText("Try another theme")).toBeInTheDocument();
@@ -24,10 +24,10 @@ it("offers Aurora at six seconds and once more at three minutes", () => {
 
 it("honors dismissal for the session and persists a selected theme", () => {
   render(<ThemeProvider><ThemeDiscovery /></ThemeProvider>);
-  act(() => vi.advanceTimersByTime(6000));
-  fireEvent.click(screen.getByRole("button", { name: /Try Aurora/ }));
-  expect(localStorage.getItem("polarops.theme")).toBe("dark");
-  expect(document.documentElement).toHaveClass("dark");
+  act(() => vi.advanceTimersByTime(10000));
+  fireEvent.click(screen.getByRole("button", { name: /Try Frost/ }));
+  expect(localStorage.getItem("polarops.theme")).toBe("light");
+  expect(document.documentElement).not.toHaveClass("dark");
   act(() => vi.advanceTimersByTime(180000));
   expect(screen.queryByLabelText("Try another theme")).toBeNull();
 });
