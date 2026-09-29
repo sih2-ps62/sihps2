@@ -30,7 +30,7 @@ export default function Cargo() {
   const list = useListState({ defaultSort: "created_at", defaultOrder: "desc" });
   const [activeFilter, setActiveFilter] = useState("All");
 
-  const { data: statsResult } = useQuery(() => api.get("/stats"), []);
+  const { data: statsResult, refetch: refreshStats } = useQuery(() => api.get("/stats"), []);
   const statItemsWithValues = cargoStatItems.map((item) => ({
     ...item,
     value: statsResult?.cargo?.[item.statKey],
@@ -98,7 +98,14 @@ export default function Cargo() {
         <Pagination page={data?.page ?? 1} totalPages={data?.totalPages ?? 1} total={data?.total ?? 0} onPageChange={list.setPage} />
       </div>
 
-      <NewCargoModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onCreated={refetch} />
+      <NewCargoModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onCreated={() => {
+          refetch();
+          refreshStats();
+        }}
+      />
     </div>
   );
 }

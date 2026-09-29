@@ -150,7 +150,11 @@ export default function Emergency() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         stations={stations}
-        onCreated={refetch}
+        onCreated={() => {
+          refetch();
+          refreshStats();
+          refreshOpen();
+        }}
       />
     </div>
   );

@@ -24,7 +24,8 @@ function DraftDetail({ id, onClose }) {
       "", "Forecasts are conditional on recorded inputs. Alternatives are independent. No inventory, dispatch or expedition changes have been executed. Revalidate conditions and departure controls before action.",
     ].join("\n");
     const url = URL.createObjectURL(new Blob([content], { type: "text/markdown;charset=utf-8" }));
-    const a = document.createElement("a"); a.href = url; a.download = `${draft.id}.md`; a.click();
+    const a = document.createElement("a"); a.href = url; a.download = `${draft.id}.md`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
   return <section className="glass-card border-accent/40 p-5 sm:p-6" aria-label="Saved draft detail">

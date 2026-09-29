@@ -1,7 +1,9 @@
 import { useState } from "react";
-import { Bell, ShieldCheck, UserCircle, Volume2 } from "lucide-react";
+import { Bell, ShieldCheck, Stethoscope, UserCircle, Volume2 } from "lucide-react";
 import Reveal from "../components/ui/Reveal";
 import { useAuth } from "../context/AuthContext";
+import { useQuery } from "../hooks/useApi";
+import { api } from "../lib/api";
 
 function usePersistedToggle(key, defaultValue) {
   const [value, setValue] = useState(() => {
@@ -53,6 +55,8 @@ export default function Settings() {
   const { user } = useAuth();
   const [emailAlerts, toggleEmailAlerts] = usePersistedToggle("polarops.pref.emailAlerts", true);
   const [soundAlerts, toggleSoundAlerts] = usePersistedToggle("polarops.pref.soundAlerts", false);
+  const { data: medicalPermission } = useQuery(() => api.get("/medical/permission"), []);
+  const hasMedicalAccess = medicalPermission?.data?.permitted ?? false;
 
   return (
     <div className="flex flex-col gap-4 px-6 py-6 md:px-8">
@@ -66,11 +70,19 @@ export default function Settings() {
             <p className="text-sm text-text-secondary">{user?.email}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2 self-start rounded-full border border-border bg-accent-soft px-3 py-1.5 sm:self-auto">
-          <ShieldCheck size={14} strokeWidth={1.75} className="text-accent" />
-          <span className="text-xs font-semibold uppercase tracking-wide text-accent">
-            {user?.role === "admin" ? "Admin" : "Duty Officer"}
-          </span>
+        <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+          <div className="flex items-center gap-2 rounded-full border border-border bg-accent-soft px-3 py-1.5">
+            <ShieldCheck size={14} strokeWidth={1.75} className="text-accent" />
+            <span className="text-xs font-semibold uppercase tracking-wide text-accent">
+              {user?.role === "admin" ? "Admin" : "Duty Officer"}
+            </span>
+          </div>
+          {hasMedicalAccess && (
+            <div className="flex items-center gap-2 rounded-full border border-border bg-accent-soft px-3 py-1.5">
+              <Stethoscope size={14} strokeWidth={1.75} className="text-accent" />
+              <span className="text-xs font-semibold uppercase tracking-wide text-accent">Medical Access</span>
+            </div>
+          )}
         </div>
       </Reveal>
 

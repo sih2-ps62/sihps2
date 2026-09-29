@@ -8,8 +8,8 @@ import argparse
 from datetime import date, datetime, timedelta
 
 from db import Base, SessionLocal, engine, utcnow
-from models import (Asset, AuditLog, CargoItem, EmergencyIncident, Expedition, InventoryItem, Personnel, Station,
-                    User, Waypoint)
+from models import (Asset, AuditLog, CargoItem, ConsumptionProfile, EmergencyIncident, Expedition, InventoryItem,
+                    Personnel, Station, User, Waypoint)
 from rules.low_stock import compute_status
 from ui_api.security import hash_password
 from models.safety import MedicalPermission
@@ -289,6 +289,23 @@ def _demo_dataset(now: datetime) -> dict:
         for i, (name, category, station, quantity, unit, threshold, maintenance) in enumerate(stock, start=1)
     ]
 
+    # (inventory index, daily_min, daily_max, basis, headcount, reserve, note) — lets the endurance forecaster
+    # (backend/planning.py) run out of the box instead of every item showing "Add a consumption range" on first login.
+    consumption = [
+        (1, 250, 420, "station", None, 3000, "Station power generation and vehicle fuel draw."),
+        (2, 0.02, 0.05, "station", None, 2, "Occasional breakdown/attrition; minimum operational fleet kept in reserve."),
+        (3, 0.9, 1.3, "person", 8, 40, "Standard field-ration draw per crew member."),
+        (4, 0.01, 0.03, "station", None, 2, "Loss/damage replacement rate."),
+        (5, 0.8, 1.5, "station", None, 5, "Launched for scheduled atmospheric readings."),
+        (6, 0.01, 0.04, "station", None, 3, "Failure/replacement rate; minimum kept operational for redundancy."),
+        (7, 0.03, 0.08, "person", 12, 15, "Wear-and-damage replacement rate per crew member."),
+    ]
+    consumption_profiles = [
+        ConsumptionProfile(inventory_id=f"INV-{i:04d}", daily_min=lo, daily_max=hi, basis=basis,
+                           headcount=headcount, reserve=reserve, note=note, updated_at=ago(hours=i * 3))
+        for i, lo, hi, basis, headcount, reserve, note in consumption
+    ]
+
     assets = [
         Asset(id="AST-0001", name="Snowmobile fleet", category="vehicle", condition="operational",
               current_holder_type="station", current_holder_id="palmer", last_inspected=day(-12)),
@@ -336,7 +353,7 @@ def _demo_dataset(now: datetime) -> dict:
              for days, user, action, resource, rid, summary in history]
 
     return {"stations": stations, "people": people, "expeditions": expeditions,
-            "rest": waypoints + cargo + inventory + assets + incidents, "audit": audit}
+            "rest": waypoints + cargo + inventory + assets + incidents + consumption_profiles, "audit": audit}
 
 
 DATASETS = {"demo": _demo_dataset, "plan": _plan_dataset}

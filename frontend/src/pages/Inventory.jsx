@@ -37,7 +37,7 @@ export default function Inventory() {
   const list = useListState({ defaultSort: "name" });
   const [activeFilter, setActiveFilter] = useState("All");
 
-  const { data: statsResult } = useQuery(() => api.get("/stats"), []);
+  const { data: statsResult, refetch: refreshStats } = useQuery(() => api.get("/stats"), []);
   const statItemsWithValues = inventoryStatItems.map((item) => ({
     ...item,
     value: statsResult?.inventory?.[item.statKey],
@@ -124,7 +124,14 @@ export default function Inventory() {
         <Pagination page={data?.page ?? 1} totalPages={data?.totalPages ?? 1} total={data?.total ?? 0} onPageChange={list.setPage} />
       </div>
 
-      <NewInventoryModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onCreated={refetch} />
+      <NewInventoryModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onCreated={() => {
+          refetch();
+          refreshStats();
+        }}
+      />
     </div>
   );
 }

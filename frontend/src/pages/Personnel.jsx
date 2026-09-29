@@ -29,7 +29,7 @@ export default function Personnel() {
   const list = useListState({ defaultSort: "name" });
   const [activeFilter, setActiveFilter] = useState("All");
 
-  const { data: statsResult } = useQuery(() => api.get("/stats"), []);
+  const { data: statsResult, refetch: refreshStats } = useQuery(() => api.get("/stats"), []);
   const statItemsWithValues = personnelStatItems.map((item) => ({
     ...item,
     value: statsResult?.personnel?.[item.statKey],
@@ -100,7 +100,10 @@ export default function Personnel() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         stations={stations}
-        onCreated={refetch}
+        onCreated={() => {
+          refetch();
+          refreshStats();
+        }}
       />
     </div>
   );

@@ -149,6 +149,21 @@ summary,
   color: theme("colors.text-primary") !important;
 }
 
+/* Leaflet's own stylesheet hardcodes popup chrome to a white background regardless of app theme,
+   which left dark-theme text (near-white) unreadable on it. */
+.leaflet-popup-content-wrapper {
+  background: theme("colors.surface-solid") !important;
+  color: theme("colors.text-primary") !important;
+}
+
+.leaflet-popup-tip {
+  background: theme("colors.surface-solid") !important;
+}
+
+.leaflet-popup-close-button {
+  color: theme("colors.text-secondary") !important;
+}
+
 /* Custom scrollbar for internally-scrollable panels */
 .thin-scroll::-webkit-scrollbar {
   width: 6px;
