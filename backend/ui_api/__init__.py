@@ -7,7 +7,7 @@ from fastapi import APIRouter
 from ui_api import (analytics, assistant, audit_log, auth, cargo, comms_risk, emergencies, expeditions, inventory,
                    personnel, resupply, sitrep)
 from ui_api import stations, stats
-from ui_api import medical, safety
+from ui_api import medical, safety, planning
 
 router = APIRouter(prefix="/api")
 
@@ -18,5 +18,5 @@ def api_health():
 
 
 for module in (auth, stations, expeditions, cargo, inventory, personnel, emergencies, stats, analytics, audit_log,
-               assistant, comms_risk, sitrep, resupply, medical, safety):
+               assistant, comms_risk, sitrep, resupply, medical, safety, planning):
     router.include_router(module.router)

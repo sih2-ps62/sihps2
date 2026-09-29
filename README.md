@@ -11,6 +11,10 @@ Tailwind + Leaflet frontend. Team of six: **Backend** â€” Maisha, Jalak, Param Â
 > quick-cards, Aurora/Frost effects, test commands and an SIH demonstration walkthrough. Existing databases
 > receive additive tables without reseeding.
 
+> **Mission Planner:** station endurance, disruption scenarios and reviewable recovery drafts are available
+> from the sidebar and Inventory. See [`docs/MISSION_PLANNER.md`](docs/MISSION_PLANNER.md) for input setup,
+> calculation rules and the isolated **Training** exercise for an SIH demo. No reseed is required.
+
 > **Presenting?** Read [`docs/DEMO_GUIDE.md`](docs/DEMO_GUIDE.md): what every feature does, where to find it,
 > a 5-minute demo script, and what is real vs. simulated.
 > **Developing?** [`docs/PROJECT_CONTEXT.md`](docs/PROJECT_CONTEXT.md) is the handoff and

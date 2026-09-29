@@ -1,0 +1,17 @@
+.planner-page { animation: planner-enter 400ms ease-out both; }
+.planner-hero { background-image: linear-gradient(115deg, color-mix(in srgb, var(--color-accent-soft) 65%, transparent), transparent 65%); }
+.planner-eyebrow { font-size: 10px; line-height: 1.5; font-weight: 600; text-transform: uppercase; letter-spacing: .17em; color: var(--color-text-secondary); }
+.planner-orbits { position: absolute; right: -75px; top: -180px; width: 560px; height: 560px; pointer-events: none; opacity: .4; transform: rotate(-25deg); }
+.planner-orbits i { position: absolute; inset: 0; border: 1px solid var(--color-border); border-radius: 50%; }
+.planner-orbits i:nth-child(2) { inset: 60px; border-style: dashed; }
+.planner-orbits i:nth-child(3) { inset: 125px; border-color: var(--color-accent); opacity: .35; }
+.planner-slider { appearance: none; height: 4px; border-radius: 8px; background: linear-gradient(to right, var(--color-accent) var(--range-fill), var(--color-border) var(--range-fill)); cursor: pointer; }
+.planner-slider::-webkit-slider-thumb { appearance: none; width: 17px; height: 17px; border-radius: 50%; background: var(--color-surface-solid); border: 3px solid var(--color-accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-accent) 10%, transparent); }
+.planner-slider::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: var(--color-surface-solid); border: 3px solid var(--color-accent); }
+.planner-slider:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 8px; }
+.planner-timeline { position: relative; margin: 24px 5px 8px; }
+.planner-timeline-line { position: absolute; top: 24px; width: 100%; height: 2px; background: var(--color-border); }
+.planner-marker { position: absolute; top: 20px; width: 10px; height: 10px; border-radius: 50%; box-shadow: 0 0 0 4px var(--color-surface-solid); transition: left 300ms ease; }
+.planner-updating .recharts-responsive-container { opacity: .45; transition: opacity 180ms ease; }
+@keyframes planner-enter { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) { .planner-page { animation: none; } .planner-marker { transition: none; } }

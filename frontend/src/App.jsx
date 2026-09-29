@@ -19,6 +19,7 @@ const Analytics = lazy(() => import("./pages/Analytics"));
 const AuditLog = lazy(() => import("./pages/AuditLog"));
 const SitrepPage = lazy(() => import("./pages/SitrepPage"));
 const Settings = lazy(() => import("./pages/Settings"));
+const MissionPlanner = lazy(() => import("./pages/MissionPlanner"));
 import NotFound from "./pages/NotFound";
 import PolarAtmosphere from "./components/ui/PolarAtmosphere";
 import ClickParticles from "./components/ui/ClickParticles";
@@ -55,6 +56,7 @@ export default function App() {
         <Route path="/analytics" element={<Analytics />} />
         <Route path="/audit-log" element={<AuditLog />} />
         <Route path="/sitrep" element={<SitrepPage />} />
+        <Route path="/planning" element={<MissionPlanner />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="*" element={<NotFound />} />
       </Route>

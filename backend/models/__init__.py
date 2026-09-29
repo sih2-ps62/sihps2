@@ -10,6 +10,7 @@ from models.personnel import Personnel
 from models.station import Station
 from models.user import User
 from models.waypoint import Waypoint
+from models.planning import ConsumptionProfile, SupplyArrival, SupplyLink, RecoveryDraft
 from models.safety import (CheckInEvent, EmergencyResource, ExpeditionManifest, MedicalAccessGrant,
                            MedicalPermission, MedicalProfile)
 

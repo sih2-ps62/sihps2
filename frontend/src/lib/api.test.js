@@ -4,7 +4,7 @@ import { api, getBlackoutState, toggleBlackout, subscribeBlackout } from "./api"
 describe("Blackout Mode offline queue", () => {
   it("never queues medical credentials or safety-critical decisions", async () => {
     toggleBlackout();
-    for (const path of ["/medical/access", "/auth/login", "/expeditions/EXP-0001", "/emergencies/INC-0001"]) {
+    for (const path of ["/medical/access", "/auth/login", "/expeditions/EXP-0001", "/emergencies/INC-0001", "/planning/simulate", "/planning/drafts", "/planning/profiles/INV-0001"]) {
       await expect(api.post(path, { password: "sensitive" })).rejects.toThrow("live verification");
     }
     expect(getBlackoutState().queue).toHaveLength(0);

@@ -275,7 +275,7 @@ if (typeof window !== "undefined") restoreOfflineQueue();
 async function request(path, options = {}) {
   const method = options.method || "GET";
   const sensitive = path.startsWith("/medical/") || path.startsWith("/auth/");
-  const safetyAction = path.startsWith("/expeditions") || path.startsWith("/emergencies") || path.startsWith("/safety/") || path.startsWith("/assets");
+  const safetyAction = path.startsWith("/expeditions") || path.startsWith("/emergencies") || path.startsWith("/safety/") || path.startsWith("/assets") || path.startsWith("/planning/");
   if (blackoutMode && (sensitive || (safetyAction && method !== "GET"))) {
     throw new ApiError("Restore the connection before this action. Safety decisions and medical access require live verification.", 0);
   }

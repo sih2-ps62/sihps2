@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Plus, Boxes, AlertTriangle, PackageX, Layers } from "lucide-react";
 import Button from "../components/ui/Button";
 import FilterChip from "../components/ui/FilterChip";
@@ -76,6 +76,11 @@ export default function Inventory() {
   return (
     <div className="flex flex-col gap-4 px-6 py-6 md:px-8">
       <StatStrip items={statItemsWithValues} delay={0} />
+
+      <Link to="/planning" className="glass-card focus-ring flex flex-wrap items-center justify-between gap-3 border-accent/25 p-4 transition-colors hover:bg-accent-soft">
+        <div><p className="text-sm font-semibold">How long will these supplies last?</p><p className="mt-1 text-xs text-text-secondary">Forecast endurance and test delivery delays in Mission Planner.</p></div>
+        <span className="text-sm font-semibold text-accent">Open planner →</span>
+      </Link>
 
       {chartResult?.data?.length > 0 && <StockLevelChart items={chartResult.data} delay={40} />}
 

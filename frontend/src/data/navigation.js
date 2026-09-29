@@ -1,4 +1,4 @@
-import { LayoutDashboard, Map, Compass, Package, Boxes, Users, Siren, TrendingUp, History, FileText } from "lucide-react";
+import { LayoutDashboard, Map, Compass, Package, Boxes, Users, Siren, TrendingUp, History, FileText, GitBranch } from "lucide-react";
 
 export const navItems = [
   {
@@ -24,6 +24,14 @@ export const navItems = [
     icon: Compass,
     title: "Expeditions",
     subtitle: "Plan routes, assignments & timelines",
+  },
+  {
+    id: "planning",
+    path: "/planning",
+    label: "Mission Planner",
+    icon: GitBranch,
+    title: "Mission Planner",
+    subtitle: "Supply endurance & disruption recovery",
   },
   {
     id: "cargo",
